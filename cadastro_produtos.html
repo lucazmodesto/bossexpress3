@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Produtos - Boss Express</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+
+        :root {
+            --boss-yellow: #FFC107;
+            --boss-yellow-dark: #E0A800;
+            --boss-yellow-light: #FFF9E6;
+            --boss-gold-accent: #FFD700; /* Um dourado para detalhes */
+            --boss-text-dark: #2c3e50; /* Um azul escuro/cinza para texto principal */
+            --boss-text-on-yellow: #422D00; /* Texto mais escuro e quente para fundos amarelos */
+            --boss-text-light: #FFFFFF;
+            --boss-background-main: #f4f6f8; /* Fundo mais suave */
+            --boss-background-content: #ffffff;
+            --boss-border-color: #e0e0e0;
+            --boss-border-color-strong: #bDBDBD;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --info-color: #007bff;
+            --text-muted: #7f8c8d; /* Cinza mais suave */
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 20px rgba(0,0,0,0.1);
+            --border-radius: 0.5rem; /* 8px */
+            --font-family-sans: 'Poppins', sans-serif;
+            --font-family-serif: 'Playfair Display', serif;
+        }
+
+        body {
+            font-family: var(--font-family-sans);
+            margin: 0; padding: 20px;
+            background-color: var(--boss-background-main);
+            color: var(--boss-text-dark);
+            line-height: 1.7;
+        }
+
+        .container {
+            background-color: var(--boss-background-content);
+            padding: 25px 30px; border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md); width: 100%;
+            max-width: 1000px; margin: 20px auto;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; flex-wrap: wrap; gap: 15px;
+        }
+        .header h1 {
+            font-family: var(--font-family-serif); color: var(--boss-text-dark);
+            font-size: 2.2em; margin: 0; letter-spacing: 0.5px;
+        }
+        .header h1 i { color: var(--boss-yellow-dark); margin-right: 12px; }
+        .header-buttons { display: flex; gap: 10px; }
+
+
+        .btn {
+            padding: 12px 22px; border: none; border-radius: var(--border-radius);
+            cursor: pointer; font-size: 0.9em; font-weight: 600;
+            transition: all 0.3s ease; text-decoration: none;
+            display: inline-flex; align-items: center; letter-spacing: 0.5px;
+            box-shadow: var(--shadow-sm); text-transform: uppercase;
+        }
+        .btn i { margin-right: 8px; font-size: 1.1em; }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .btn:active { transform: translateY(0px); box-shadow: var(--shadow-sm); }
+
+        .btn-primary { background-color: var(--boss-yellow); color: var(--boss-text-on-yellow); }
+        .btn-primary:hover { background-color: var(--boss-yellow-dark); }
+
+        .btn-secondary { background-color: var(--boss-text-dark); color: var(--boss-text-light); }
+        .btn-secondary:hover { background-color: #4a637c; }
+
+        .btn-edit, .btn-delete { padding: 7px 12px; font-size: 0.8em; text-transform: none; }
+        .btn-edit { background-color: var(--info-color); color: white; margin-right: 5px; }
+        .btn-edit:hover { background-color: #0056b3; }
+        .btn-delete { background-color: var(--danger-color); color: white; }
+        .btn-delete:hover { background-color: #c82333; }
+
+        #productsTable {
+            width: 100%; /* Garantir que a tabela tente usar a largura disponível */
+            border-collapse: collapse; /* Estética melhor para bordas */
+        }
+        #productsTable th, #productsTable td {
+            padding: 12px 15px; /* Padding padrão das células */
+            text-align: left;
+            border-bottom: 1px solid var(--boss-border-color);
+        }
+        #productsTable th {
+            background-color: var(--boss-yellow-light); color: var(--boss-text-dark);
+            font-weight: 600; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        #productsTable td { font-size: 0.9em; }
+        #productsTable .actions {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .loading, .no-products { text-align: center; padding: 25px; font-style: italic; color: var(--text-muted); font-size: 1em; }
+        .loading i { margin-right: 8px; }
+
+
+        /* === MODAIS === */
+        .modal {
+            display: none; position: fixed; z-index: 1050;
+            left: 0; top: 0; width: 100%; height: 100%;
+            overflow-y: auto; background-color: rgba(44, 62, 80, 0.85);
+            align-items: center; justify-content: center; padding: 20px;
+            box-sizing: border-box; /* Para padding não afetar width/height 100% */
+        }
+        .modal-content-wrapper {
+            background-color: var(--boss-background-content);
+            margin: auto; padding: 30px 35px; border-radius: var(--border-radius);
+            width: 100%; box-shadow: var(--shadow-lg);
+            position: relative; animation: slideInUp 0.5s ease-out;
+            max-height: 90vh; overflow-y: auto;
+            box-sizing: border-box;
+        }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+
+        .modal-header-area {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 25px; padding-bottom: 18px;
+            border-bottom: 1px solid var(--boss-border-color);
+        }
+        .modal-header-area h2 {
+            font-family: var(--font-family-serif); margin-top: 0; color: var(--boss-text-dark);
+            font-size: 1.8em; font-weight: 700;
+        }
+        .modal-header-area h2 i { color: var(--boss-yellow-dark); margin-right: 12px; }
+        .modal-close-button {
+            font-size: 1.8em; color: var(--text-muted); background: none;
+            border: none; cursor: pointer; line-height: 1; padding: 0;
+            transition: color 0.2s ease;
+        }
+        .modal-close-button:hover { color: var(--danger-color); }
+
+        /* Modal Cadastro */
+        #productModal .modal-content-wrapper { max-width: 600px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; /* Para margin-bottom funcionar */
+            margin-bottom: 6px; /* Espaço entre label e input */
+            font-weight: 500; color: #555; font-size: 0.9em;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; /* Fazer inputs ocuparem toda a largura */
+            box-sizing: border-box; /* Padding não aumenta a largura total */
+            border: 1px solid var(--boss-border-color-strong);
+            font-size: 1em; padding: 12px;
+            border-radius: var(--border-radius); /* Consistência no border-radius */
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--boss-yellow);
+            box-shadow: 0 0 0 0.2rem var(--boss-yellow-light);
+            outline: none; /* Remover outline padrão */
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px; /* Espaçamento entre os form-groups na linha */
+            margin-bottom: 20px; /* Margem da linha de formulário */
+        }
+        .form-row .form-group {
+            flex: 1; /* Divide o espaço igualmente */
+            margin-bottom: 0; /* Remove margem individual, pois o .form-row já tem */
+        }
+        
+        #message { margin-top: 20px; font-size: 0.9em; padding: 10px; border-radius: var(--border-radius); }
+        #message.success { background-color: var(--success-color); color: white; }
+        #message.error { background-color: var(--danger-color); color: white; }
+
+
+        /* === CARDÁPIO "INSTAGRAMÁVEL" === */
+        #cardapioModal .modal-content-wrapper {
+            max-width: 450px;
+            background: linear-gradient(135deg, var(--boss-yellow-light) 0%, #ffffff 100%);
+        }
+        #cardapioDisplayArea {
+            padding: 5px; margin-top: 0;
+        }
+        .cardapio-brand-header {
+            text-align: center; margin-bottom: 25px; padding-bottom: 20px;
+            border-bottom: 2px dashed var(--boss-yellow-dark);
+        }
+        .cardapio-logo {
+            width: 100px; height: 100px;
+            background-color: var(--boss-yellow); color: var(--boss-text-on-yellow);
+            border-radius: 50%; margin: 0 auto 15px auto;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-family-serif); font-size: 2em; font-weight: 700;
+            box-shadow: 0 4px 10px rgba(224, 168, 0, 0.4);
+        }
+        .cardapio-brand-header h2 {
+            font-family: var(--font-family-serif); font-size: 2.5em;
+            color: var(--boss-text-dark); margin-bottom: 5px; letter-spacing: 1px;
+        }
+        .cardapio-brand-header .slogan {
+            font-size: 0.95em; color: var(--text-muted); font-style: italic;
+        }
+        .cardapio-items-container { display: flex; flex-direction: column; gap: 20px; }
+        .cardapio-item-stylish {
+            background-color: var(--boss-background-content);
+            border-radius: var(--border-radius); padding: 20px;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 5px solid var(--boss-yellow);
+        }
+        .cardapio-item-stylish:hover { transform: scale(1.03); box-shadow: var(--shadow-lg); }
+        .cardapio-item-header {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 8px;
+        }
+        .cardapio-item-nome-stylish {
+            font-family: var(--font-family-sans); font-size: 1.3em; font-weight: 600;
+            color: var(--boss-text-dark); flex-grow: 1; margin-right: 10px;
+        }
+        .cardapio-item-preco-stylish {
+            font-family: var(--font-family-sans); font-size: 1.35em; font-weight: 700;
+            color: var(--boss-yellow-dark); background-color: var(--boss-yellow-light);
+            padding: 3px 8px; border-radius: 4px; white-space: nowrap;
+        }
+        .cardapio-item-descricao-stylish {
+            font-size: 0.85em; color: var(--text-muted);
+            line-height: 1.5; padding-left: 5px;
+            border-left: 2px solid var(--boss-border-color);
+        }
+        .cardapio-empty-message { text-align: center; padding: 40px 20px; font-size: 1.1em; color: var(--text-muted); }
+        .cardapio-footer-stylish {
+            text-align: center; margin-top: 30px; padding-top: 20px;
+            border-top: 2px dashed var(--boss-yellow-dark);
+            font-size: 0.9em; color: var(--text-muted);
+        }
+        .cardapio-footer-stylish i { color: var(--boss-yellow-dark); margin: 0 5px; }
+        .btn-print-cardapio {
+            margin-top: 25px; background-color: var(--boss-text-dark); color: var(--boss-text-light);
+            display: block; width: fit-content; margin-left: auto; margin-right: auto;
+        }
+        .btn-print-cardapio:hover { background-color: #4a637c; }
+
+        /* === ESTILOS DE IMPRESSÃO === */
+        @media print {
+            body * { visibility: hidden; }
+            #cardapioModal, #cardapioModal * { visibility: visible; }
+            #cardapioModal {
+                position: absolute; left: 0; top: 0; width: 100%; height: auto;
+                box-shadow: none; border: none; padding: 0; margin: 0; overflow: visible !important;
+                background: white !important;
+            }
+            #cardapioModal .modal-content-wrapper {
+                box-shadow: none !important; border: none !important; padding: 15px !important;
+                max-height: none !important; width: 100% !important; max-width: 100% !important;
+                background: white !important;
+            }
+            #cardapioDisplayArea { overflow-y: visible !important; padding-right: 0 !important; }
+            .modal-header-area .modal-close-button, .btn-print-cardapio, .cardapio-footer-stylish { display: none !important; }
+            .cardapio-item-stylish { page-break-inside: avoid; box-shadow: none !important; border: 1px solid #ddd !important; margin-bottom:15px; }
+            .cardapio-brand-header h2 { font-size: 2em; }
+            .cardapio-brand-header .slogan { font-size: 0.9em; }
+            .cardapio-items-container { gap: 15px; }
+        }
+
+        /* === MEDIA QUERIES PARA RESPONSIVIDADE === */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                font-size: 15px;
+            }
+
+            .container {
+                padding: 15px;
+                margin: 10px auto;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: stretch; /* Título e botões ocupam a largura */
+                gap: 20px;
+            }
+            .header h1 {
+                font-size: 1.8em;
+                text-align: center; /* Centralizar título */
+            }
+            .header h1 i { margin-right: 8px; }
+            .header-buttons {
+                width: 100%;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .header-buttons .btn {
+                width: 100%;
+                justify-content: center;
+                padding: 12px 15px;
+                font-size: 0.95em;
+            }
+
+            /* Tabela Responsiva com Scroll Horizontal */
+            .table-responsive-wrapper { /* Adicionar este wrapper ao redor da tabela no HTML */
+                 display: block;
+                 width: 100%;
+                 overflow-x: auto;
+                 -webkit-overflow-scrolling: touch; /* Scroll suave em iOS */
+            }
+            /* Se não quiser adicionar um wrapper, aplique diretamente na tabela: */
+            /* #productsTable { display: block; overflow-x: auto; white-space: nowrap; } */
+
+            #productsTable th,
+            #productsTable td {
+                padding: 8px 10px;
+                font-size: 0.85em;
+                white-space: nowrap; /* Para que o conteúdo da célula não quebre tanto */
+            }
+             #productsTable th {
+                font-size: 0.8em;
+            }
+            #productsTable .actions {
+                text-align: left; /* Ajustar alinhamento dos botões em mobile */
+                white-space: nowrap;
+            }
+            .btn-edit, .btn-delete {
+                padding: 6px 10px;
+                font-size: 0.75em;
+            }
+
+            /* Modais Responsivos */
+            .modal { padding: 10px; } /* Menor padding na área de fundo do modal */
+            .modal-content-wrapper {
+                padding: 20px;
+                width: 95vw;
+                max-height: 85vh;
+            }
+            .modal-header-area {
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+            }
+            .modal-header-area h2 {
+                font-size: 1.5em;
+            }
+            .modal-header-area h2 i { margin-right: 8px; }
+
+            /* Modal de Cadastro/Edição Responsivo */
+            #productModal .modal-content-wrapper { max-width: 95vw; }
+            .form-group { margin-bottom: 15px; }
+            .form-group label { font-size: 0.85em; }
+            .form-group input, .form-group select, .form-group textarea {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+            .form-row {
+                flex-direction: column; /* Empilhar campos */
+                gap: 0; /* Remover gap, .form-group já tem margem */
+                margin-bottom: 0; /* Cada .form-group controla sua margem */
+            }
+            .form-row .form-group {
+                margin-bottom: 15px; /* Espaçamento entre campos empilhados */
+            }
+            .form-row .form-group:last-child { margin-bottom: 0; }
+
+
+            /* Modal do Cardápio Responsivo */
+            #cardapioModal .modal-content-wrapper {
+                max-width: 95vw;
+                padding: 20px 15px;
+            }
+            .cardapio-brand-header h2 { font-size: 2em; }
+            .cardapio-brand-header .slogan { font-size: 0.9em; }
+            .cardapio-logo { width: 80px; height: 80px; font-size: 1.8em; }
+            .cardapio-item-stylish { padding: 15px; }
+            .cardapio-item-header {
+                /* Considerar empilhar se necessário, mas com flex-grow deve se ajustar */
+                /* flex-direction: column; align-items: flex-start; gap: 5px; */
+            }
+            .cardapio-item-nome-stylish { font-size: 1.1em; }
+            .cardapio-item-preco-stylish { font-size: 1.15em; padding: 2px 6px; }
+            .cardapio-item-descricao-stylish { font-size: 0.8em; }
+            .btn-print-cardapio { padding: 10px 18px; font-size: 0.85em; }
+        }
+
+        /* Ajustes para Telas Muito Pequenas (ex: smartphones menores) */
+        @media (max-width: 420px) {
+            body { padding: 5px; }
+            .container { padding: 10px; margin: 5px auto; }
+            .header h1 { font-size: 1.6em; }
+            .header-buttons .btn { padding: 10px 12px; font-size: 0.85em; }
+            .header-buttons .btn i { margin-right: 5px; }
+
+            #productsTable th, #productsTable td {
+                padding: 6px 8px;
+                font-size: 0.8em;
+            }
+             #productsTable th {
+                font-size: 0.75em;
+            }
+            /* Ações da tabela com apenas ícones */
+            .btn-edit, .btn-delete {
+                min-width: auto; /* Reset min-width */
+                width: 36px; /* Largura fixa para o botão com ícone */
+                height: 30px; /* Altura fixa */
+                text-indent: -9999px; /* Esconder texto */
+                position: relative;
+                padding: 0; /* Reset padding */
+                font-size: 1em; /* Reset font-size para o ícone herdar corretamente */
+            }
+            .btn-edit i, .btn-delete i {
+                margin-right: 0;
+                position: absolute;
+                left: 50%; top: 50%;
+                transform: translate(-50%, -50%);
+                text-indent: 0; /* Tornar ícone visível */
+                font-size: 0.9em; /* Tamanho do ícone dentro do botão */
+            }
+            .btn-edit { margin-right: 8px; } /* Espaço entre botões de ícone */
+
+
+            .modal-content-wrapper { padding: 15px 10px; }
+            .modal-header-area h2 { font-size: 1.3em; }
+            .modal-close-button { font-size: 1.6em; }
+
+            .form-group input, .form-group select, .form-group textarea {
+                padding: 8px; font-size: 0.85em;
+            }
+
+            .cardapio-brand-header h2 { font-size: 1.8em; }
+            .cardapio-logo { width: 70px; height: 70px; font-size: 1.6em; }
+            .cardapio-item-nome-stylish { font-size: 1em; }
+            .cardapio-item-preco-stylish { font-size: 1em; }
+            .cardapio-item-descricao-stylish { font-size: 0.75em; }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cogs"></i> Gerenciar Produtos</h1>
+            <div class="header-buttons">
+                <button id="btnGerarCardapio" class="btn btn-secondary"><i class="fas fa-book-open"></i> Ver Cardápio</button>
+                <button id="addNewProductBtn" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Novo Produto</button>
+            </div>
+        </div>
+
+        <div class="table-responsive-wrapper">
+            <table id="productsTable">
+                <thead>
+                    <tr>
+                        <th>Nome</th><th>Código/SKU</th><th>Preço Venda</th><th>Estoque</th><th>Unidade</th><th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                    <tr><td colspan="6" class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="noProductsMessage" class="no-products" style="display: none;">Nenhum produto cadastrado.</div>
+    </div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-header-area">
+                <h2 id="modalTitle"></h2>
+                <button class="modal-close-button" onclick="closeModal('productModal')">&times;</button>
+            </div>
+            <form id="productForm">
+                <input type="hidden" id="productId" name="productId">
+                <div class="form-group">
+                    <label for="productName">Nome do Produto <span style="color: red;">*</span></label>
+                    <input type="text" id="productName" name="productName" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productCode">Código/SKU</label>
+                        <input type="text" id="productCode" name="productCode" placeholder="Ex: PROD-123">
+                    </div>
+                    <div class="form-group">
+                        <label for="productUnit">Unidade <span style="color: red;">*</span></label>
+                        <select id="productUnit" name="productUnit" required>
+                            <option value="UN">Unidade (UN)</option><option value="CX">Caixa (CX)</option>
+                            <option value="PC">Peça (PC)</option><option value="KG">Kg</option><option value="G">g</option>
+                            <option value="L">Litro (L)</option><option value="ML">ml</option><option value="M">Metro (m)</option>
+                            <option value="PAR">Par</option><option value="KIT">Kit</option><option value="OUTRO">Outro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="costPrice">Preço de Custo (R$)</label>
+                        <input type="number" id="costPrice" name="costPrice" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="sellPrice">Preço de Venda (R$) <span style="color: red;">*</span></label>
+                        <input type="number" id="sellPrice" name="sellPrice" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="currentStock">Estoque Atual <span style="color: red;">*</span></label>
+                    <input type="number" id="currentStock" name="currentStock" step="1" min="0" value="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="productDescription">Descrição Breve (para cardápio)</label>
+                    <textarea id="productDescription" name="productDescription" rows="3" placeholder="Ex: Delicioso bolo de chocolate com cobertura cremosa..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fas fa-save"></i> Salvar Produto</button>
+                <div id="message"></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="cardapioModal" class="modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-header-area">
+                <h2 id="cardapioModalTitle"><i class="fas fa-utensils"></i> Nosso Cardápio</h2>
+                <button class="modal-close-button" onclick="closeModal('cardapioModal')">&times;</button>
+            </div>
+            <div id="cardapioDisplayArea">
+                </div>
+            <button id="btnPrintCardapio" class="btn btn-print-cardapio"><i class="fas fa-print"></i> Imprimir / Salvar PDF</button>
+            <div class="cardapio-footer-stylish">
+                <i class="fas fa-star"></i> Boss Express - O sabor que impressiona! <i class="fas fa-star"></i>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD5DNTmLpQZWihjDDGHkFa5S5zuEJHquno", // Sua chave de API do Firebase
+            authDomain: "bossexpress-6f223.firebaseapp.com",
+            projectId: "bossexpress-6f223",
+            storageBucket: "bossexpress-6f223.appspot.com", // Corrigido: .appspot.com
+            messagingSenderId: "127302407767",
+            appId: "1:127302407767:web:c50d1adc02f6837c79f512",
+            measurementId: "G-W255R6N65R"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const productsCollection = db.collection('produtos');
+
+        const productModalEl = document.getElementById('productModal');
+        const productFormEl = document.getElementById('productForm');
+        const modalTitleEl = document.getElementById('modalTitle');
+        const messageDivEl = document.getElementById('message');
+        const productsTableBodyEl = document.getElementById('productsTableBody');
+        const addNewProductBtnEl = document.getElementById('addNewProductBtn');
+        const noProductsMessageEl = document.getElementById('noProductsMessage');
+        let currentEditingId = null;
+
+        const btnGerarCardapioEl = document.getElementById('btnGerarCardapio');
+        const cardapioModalEl = document.getElementById('cardapioModal');
+        const cardapioDisplayAreaEl = document.getElementById('cardapioDisplayArea');
+        const btnPrintCardapioEl = document.getElementById('btnPrintCardapio');
+
+        function generateSuggestedSKU() {
+            const prefix = "BE-"; // Boss Express
+            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+            return prefix + randomPart;
+        }
+
+        function openModal(modalId, productData = null, productId = null) {
+            const modalToOpen = document.getElementById(modalId);
+            if (!modalToOpen) return;
+
+            if (modalId === 'productModal') {
+                productFormEl.reset(); messageDivEl.textContent = ''; messageDivEl.className = '';
+                currentEditingId = productId;
+                if (productData) {
+                    modalTitleEl.innerHTML = '<i class="fas fa-edit"></i> Editar Produto';
+                    // Mapeamento mais robusto dos campos
+                    document.getElementById('productName').value = productData.nome || '';
+                    document.getElementById('productCode').value = productData.codigo || '';
+                    document.getElementById('productUnit').value = productData.unidade || 'UN';
+                    document.getElementById('costPrice').value = productData.precoCusto !== undefined ? productData.precoCusto : '';
+                    document.getElementById('sellPrice').value = productData.precoVenda !== undefined ? productData.precoVenda : '';
+                    document.getElementById('currentStock').value = productData.estoqueAtual !== undefined ? productData.estoqueAtual : '0';
+                    document.getElementById('productDescription').value = productData.descricao || '';
+                    if(productId) document.getElementById('productId').value = productId;
+
+                } else {
+                    modalTitleEl.innerHTML = '<i class="fas fa-plus-circle"></i> Adicionar Novo Produto';
+                    document.getElementById('productId').value = '';
+                    document.getElementById('productCode').value = generateSuggestedSKU();
+                }
+                document.getElementById('productName').focus();
+            }
+            modalToOpen.style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            const modalToClose = document.getElementById(modalId);
+            if (modalToClose) modalToClose.style.display = 'none';
+        }
+
+        addNewProductBtnEl.onclick = () => openModal('productModal');
+        window.onclick = (event) => { if (event.target.classList.contains('modal')) closeModal(event.target.id); };
+        window.onkeydown = (event) => {
+            if (event.key === "Escape") {
+                if (productModalEl.style.display === 'flex') closeModal('productModal');
+                if (cardapioModalEl.style.display === 'flex') closeModal('cardapioModal');
+            }
+        };
+
+        productFormEl.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const productName = document.getElementById('productName').value;
+            const productUnit = document.getElementById('productUnit').value;
+            const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+            const currentStock = parseInt(document.getElementById('currentStock').value); // Era parseFloat, mudei para parseInt para estoque
+
+            if (!productName.trim() || !productUnit || isNaN(sellPrice) || sellPrice <= 0 || isNaN(currentStock) || currentStock < 0) {
+                displayModalMessage('Preencha nome, unidade, preço de venda e estoque corretamente.', 'error'); return;
+            }
+            const productData = {
+                nome: productName,
+                codigo: document.getElementById('productCode').value.trim() || generateSuggestedSKU(),
+                unidade: productUnit,
+                precoCusto: parseFloat(document.getElementById('costPrice').value) || 0,
+                precoVenda: sellPrice,
+                estoqueAtual: currentStock,
+                descricao: document.getElementById('productDescription').value.trim(),
+            };
+            try {
+                if (currentEditingId) {
+                    await productsCollection.doc(currentEditingId).update(productData);
+                    displayModalMessage('Produto atualizado!', 'success');
+                } else {
+                    productData.dataCadastro = firebase.firestore.FieldValue.serverTimestamp();
+                    await productsCollection.add(productData);
+                    displayModalMessage('Produto cadastrado!', 'success');
+                }
+                fetchProducts(); setTimeout(() => closeModal('productModal'), 1200);
+            } catch (error) { console.error("Erro Salvar:", error); displayModalMessage(`Erro: ${error.message}`, 'error'); }
+        });
+
+        async function fetchProducts() {
+            productsTableBodyEl.innerHTML = '<tr><td colspan="6" class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
+            noProductsMessageEl.style.display = 'none';
+            document.querySelector('.table-responsive-wrapper').style.display = 'block'; // Mostrar wrapper
+            try {
+                const snapshot = await productsCollection.orderBy('nome').get();
+                if (snapshot.empty) {
+                     productsTableBodyEl.innerHTML = '';
+                     noProductsMessageEl.style.display = 'block';
+                     document.querySelector('.table-responsive-wrapper').style.display = 'none'; // Ocultar wrapper se não houver produtos
+                     return;
+                }
+                productsTableBodyEl.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const product = doc.data(); const row = productsTableBodyEl.insertRow();
+                    row.insertCell().textContent = product.nome;
+                    row.insertCell().textContent = product.codigo || '-';
+                    row.insertCell().textContent = `R$ ${(product.precoVenda || 0).toFixed(2).replace('.', ',')}`;
+                    row.insertCell().textContent = product.estoqueAtual !== undefined ? product.estoqueAtual : '-';
+                    row.insertCell().textContent = product.unidade || '-';
+                    const actionsCell = row.insertCell(); actionsCell.classList.add('actions');
+                    const editButton = document.createElement('button'); editButton.innerHTML = '<i class="fas fa-edit"></i> Editar';
+                    editButton.classList.add('btn', 'btn-edit'); editButton.onclick = () => openModal('productModal', product, doc.id);
+                    actionsCell.appendChild(editButton);
+                    const deleteButton = document.createElement('button'); deleteButton.innerHTML = '<i class="fas fa-trash-alt"></i> Excluir';
+                    deleteButton.classList.add('btn', 'btn-delete'); deleteButton.onclick = () => deleteProduct(doc.id, product.nome);
+                    actionsCell.appendChild(deleteButton);
+                });
+            } catch (error) {
+                console.error("Erro Buscar:", error);
+                productsTableBodyEl.innerHTML = '<tr><td colspan="6" class="loading" style="color:var(--danger-color);">Erro ao carregar produtos.</td></tr>';
+                document.querySelector('.table-responsive-wrapper').style.display = 'block'; // Manter visível para mostrar erro
+            }
+        }
+
+        async function deleteProduct(productId, productName) {
+            if (confirm(`Tem certeza que deseja excluir o produto "${productName}"? Esta ação não pode ser desfeita.`)) {
+                try {
+                    await productsCollection.doc(productId).delete();
+                    displayModalMessage(`Produto "${productName}" excluído com sucesso!`, 'success'); // Usar messageDivEl do modal principal
+                    fetchProducts();
+                } catch (error) {
+                    console.error("Erro Excluir:", error);
+                    displayModalMessage(`Erro ao excluir produto: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function displayModalMessage(msg, type) {
+            const activeModal = document.querySelector('.modal[style*="display: flex"]');
+            let msgElement = messageDivEl; // Padrão para o modal de produto
+
+            if (activeModal && activeModal.id === 'cardapioModal') {
+                // Se quisermos exibir mensagens no modal do cardápio, precisaríamos de um elemento similar lá.
+                // Por enquanto, todas as mensagens vão para o modal de produto ou, se nenhum estiver aberto, para um local genérico.
+                // Para este caso, vamos assumir que as mensagens de erro/sucesso de CRUD são do modal de produto.
+            } else if (!activeModal && (type === 'success' || type === 'error')) {
+                // Se nenhum modal estiver ativo, mas é uma mensagem de sucesso/erro (ex: após exclusão)
+                // Poderíamos ter um container de mensagens global na página principal.
+                // Por simplicidade, vou continuar usando messageDivEl que está no productModal.
+                // Se o productModal não for o contexto, esta mensagem pode não ser ideal.
+                // No caso da exclusão, a mensagem é mais um alerta geral.
+                if(type === 'error') alert(msg); // Usar alert para erros fora do contexto do modal
+                // Para sucesso, pode ser um console.log ou um elemento temporário no body.
+                console.log(msg);
+            }
+
+
+            if (msgElement) {
+                 msgElement.textContent = msg;
+                 msgElement.className = `message ${type}`; // Usar as classes .success ou .error
+                 msgElement.style.display = 'block';
+                 setTimeout(() => {
+                     msgElement.textContent = '';
+                     msgElement.className = 'message';
+                     msgElement.style.display = 'none';
+                 }, 3500);
+            }
+        }
+
+
+        btnGerarCardapioEl.addEventListener('click', async () => {
+            cardapioDisplayAreaEl.innerHTML = '<p class="loading" style="text-align:center; padding:20px; font-size:1.1em; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Montando seu cardápio...</p>';
+            openModal('cardapioModal');
+            try {
+                const snapshot = await productsCollection.orderBy('nome').get();
+                if (snapshot.empty) {
+                    cardapioDisplayAreaEl.innerHTML = '<p class="cardapio-empty-message">Sem produtos para o cardápio. Que tal cadastrar alguns?</p>'; return;
+                }
+                let cardapioHTML = `
+                    <div class="cardapio-brand-header">
+                        <div class="cardapio-logo">BE</div>
+                        <h2>Boss Express</h2>
+                        <p class="slogan">Seu Sabor Expresso de Felicidade!</p>
+                    </div>
+                    <div class="cardapio-items-container">`;
+                snapshot.forEach(doc => {
+                    const product = doc.data();
+                    if (product.precoVenda > 0 && (product.estoqueAtual === undefined || product.estoqueAtual > 0 || product.estoqueAtual === null )) { // Considerar null como estoque não controlado
+                        cardapioHTML += `
+                            <div class="cardapio-item-stylish">
+                                <div class="cardapio-item-header">
+                                    <span class="cardapio-item-nome-stylish">${product.nome}</span>
+                                    <span class="cardapio-item-preco-stylish">R$ ${(product.precoVenda || 0).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                ${product.descricao ? `<div class="cardapio-item-descricao-stylish">${product.descricao}</div>` : ''}
+                            </div>`;
+                    }
+                });
+                cardapioHTML += '</div>';
+                cardapioDisplayAreaEl.innerHTML = cardapioHTML;
+            } catch (error) {
+                console.error("Erro Gerar Cardápio:", error);
+                cardapioDisplayAreaEl.innerHTML = '<p class="cardapio-empty-message" style="color:var(--danger-color);">Ops! Algo deu errado ao buscar os produtos.</p>';
+            }
+        });
+
+        btnPrintCardapioEl.addEventListener('click', () => { window.print(); });
+        fetchProducts();
+    </script>
+</body>
+</html>

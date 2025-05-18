@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Venda Rápida - Boss Express</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <style>
+        /* === THEME BOSS EXPRESS === */
+        :root {
+            --boss-yellow: #FFC107;
+            --boss-yellow-dark: #E0A800;
+            --boss-yellow-light: #FFF3CD;
+            --boss-text-dark: #333333;
+            --boss-text-on-yellow: #333333; /* Texto escuro sobre fundo amarelo */
+            --boss-text-light: #FFFFFF;
+            --boss-background-main: #f8f9fa; /* Fundo principal da página (fora do container da venda) */
+            --boss-background-content: #ffffff; /* Fundo do container da venda, cards, modais */
+            --boss-border-color: #dee2e6;
+            --boss-border-color-strong: #c0c0c0;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --info-color: #007bff; /* Azul para Débito/Crédito */
+            --text-muted: #6c757d;
+            --shadow-sm: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            --shadow-md: 0 0.3rem 0.75rem rgba(0,0,0,0.1);
+            --border-radius: 0.375rem; /* 6px */
+            --font-family: Arial, sans-serif;
+        }
+
+        /* === RESET BÁSICO === */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--boss-background-main);
+            color: var(--boss-text-dark);
+            line-height: 1.6;
+            font-size: 15px; /* Base font size */
+            -webkit-tap-highlight-color: transparent;
+            display: flex;
+            justify-content: center;
+            padding-top: 10px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: calc(100vh - 20px);
+            max-height: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--boss-background-content);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .top-header {
+            background-color: var(--boss-yellow);
+            color: var(--boss-text-on-yellow);
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--boss-yellow-dark);
+            flex-shrink: 0;
+        }
+        .top-header h1 {
+            font-size: 1.25em;
+            margin: 0;
+            font-weight: 600;
+        }
+        .top-header h1 i { margin-right: 8px; }
+        .top-header .btn-montar-bolsa {
+            background-color: var(--boss-yellow-dark);
+            color: var(--boss-text-light);
+            border: none;
+            padding: 7px 12px;
+            font-size: 0.85em;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .top-header .btn-montar-bolsa:hover { background-color: #D18C00; }
+        .top-header .btn-montar-bolsa i { margin-right: 5px; }
+
+        .venda-content-area {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        #product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+            background-color: var(--boss-background-main);
+        }
+        .product-card {
+            background-color: var(--boss-background-content);
+            border: 1px solid var(--boss-border-color);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.15s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+        .product-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .product-card.out-of-stock-bolsa { background-color: #f0f0f0; cursor: not-allowed; opacity: 0.7; }
+        .product-card.out-of-stock-bolsa .product-stock-bolsa { color: var(--danger-color); font-weight: 600; }
+        .product-card:not(.out-of-stock-bolsa):active { transform: scale(0.96); }
+
+        .product-card .product-name {
+            font-weight: 600; font-size: 0.875em; margin-bottom: 5px;
+            word-break: break-word; min-height: 34px;
+            color: var(--boss-text-dark);
+            line-height: 1.3;
+        }
+        .product-card .product-price {
+            font-size: 0.95em; color: var(--success-color);
+            font-weight: 700; margin-bottom: 5px;
+        }
+        .product-card .product-stock-bolsa {
+            font-size: 0.75em; color: var(--text-muted);
+            margin-top: auto; padding-top: 4px;
+        }
+
+        #cart-and-checkout-area {
+            background-color: var(--boss-background-content);
+            padding: 15px;
+            border-top: 1px solid var(--boss-border-color-strong);
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+            flex-shrink: 0;
+        }
+        #cart-items-list {
+            list-style: none; padding: 0; margin: 0 0 12px 0;
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid var(--boss-border-color);
+            border-radius: var(--border-radius);
+            padding: 8px;
+        }
+        #cart-items-list li {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 0; font-size: 0.875em;
+            border-bottom: 1px dotted var(--boss-border-color);
+        }
+        #cart-items-list li:last-child { border-bottom: none; }
+        .cart-item-details { flex-grow: 1; margin-right: 8px;}
+        .cart-item-name { font-weight: 500; }
+        .cart-item-price { color: var(--text-muted); font-size: 0.9em; display: block; }
+        .cart-item-controls { display: flex; align-items: center; gap: 6px; }
+        .cart-item-controls button {
+            background-color: var(--text-muted); color: white; border: none;
+            width: 24px; height: 24px; border-radius: 50%;
+            font-size: 0.8em; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: background-color 0.2s;
+        }
+        .cart-item-controls button:hover { background-color: var(--boss-text-dark); }
+        .cart-item-controls button.remove-item-btn { background-color: var(--danger-color); }
+        .cart-item-controls button.remove-item-btn:hover { background-color: #c82333; }
+        .cart-item-controls button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .cart-item-quantity { font-weight: 600; min-width: 18px; text-align: center; }
+
+        #cart-total-display {
+            text-align: right; font-size: 1.2em; font-weight: 700;
+            color: var(--boss-text-dark); margin-bottom: 12px;
+        }
+
+        #payment-options-selector { margin-bottom: 12px; }
+        #payment-options-selector h3 {
+            font-size: 0.95em; color: var(--boss-text-dark);
+            margin-bottom: 8px; text-align: left; font-weight: 600;
+        }
+        .payment-methods-container {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .payment-method-btn {
+            background-color: var(--boss-background-content);
+            color: var(--boss-text-dark);
+            border: 1px solid var(--boss-border-color-strong);
+            padding: 10px 8px; font-size: 0.8em;
+            border-radius: var(--border-radius); cursor: pointer;
+            text-align: center; transition: all 0.2s ease; font-weight: 500;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            line-height: 1.2;
+        }
+        .payment-method-btn i { font-size: 1.3em; margin-bottom: 4px; }
+        .payment-method-btn.selected, .payment-method-btn:hover {
+            border-color: var(--boss-yellow-dark);
+            background-color: var(--boss-yellow-light);
+            color: var(--boss-text-on-yellow);
+            font-weight: 600;
+        }
+        .payment-method-btn.selected { box-shadow: 0 0 0 2px var(--boss-yellow); }
+
+        #finalize-sale-btn-container { margin-top: 10px; }
+        #finalize-sale-btn {
+            background-color: var(--success-color);
+            color: white; width: 100%; padding: 12px;
+            font-size: 1.05em; border: none;
+            border-radius: var(--border-radius); cursor: pointer;
+            text-transform: uppercase; font-weight: 700;
+            transition: background-color 0.2s ease;
+        }
+        #finalize-sale-btn:hover { background-color: #218838; }
+        #finalize-sale-btn:disabled { background-color: #adb5bd; color: #6c757d; cursor: not-allowed; }
+        #finalize-sale-btn i { margin-right: 8px; }
+
+        .modal {
+            display: none; position: fixed; z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.55);
+            align-items: center; justify-content: center;
+            padding: 15px;
+        }
+        .modal-content-wrapper {
+            background-color: var(--boss-background-content);
+            padding: 20px 25px;
+            border-radius: var(--border-radius);
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            animation: fadeInModal 0.3s ease-out;
+        }
+        @keyframes fadeInModal { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .modal-header-area {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--boss-border-color);
+        }
+        .modal-header-area h2 {
+            font-size: 1.3em; margin: 0; color: var(--boss-text-dark); font-weight: 600;
+        }
+        .modal-header-area h2 i { margin-right: 10px; color: var(--boss-yellow-dark); }
+        .modal-close-button {
+            font-size: 1.6em; color: var(--text-muted); background: none;
+            border: none; cursor: pointer; padding: 0 5px; line-height: 1;
+        }
+        .modal-close-button:hover { color: var(--boss-text-dark); }
+
+        /* MODAL MONTAR BOLSA - Ajustes de Responsividade */
+        #montar-bolsa-modal .modal-content-wrapper {
+            max-width: 550px;
+            max-height: 90vh; /* Limita altura do modal */
+            display: flex;    /* Usa flexbox */
+            flex-direction: column; /* Conteúdo empilhado verticalmente */
+            overflow: hidden; /* Previne scroll no wrapper, scroll interno na lista */
+        }
+        #montar-bolsa-modal .modal-description-text {
+            font-size:0.9em; color:var(--text-muted); margin-bottom:15px;
+            flex-shrink: 0; /* Não deixa a descrição encolher */
+        }
+        #lista-catalogo-para-bolsa {
+            flex-grow: 1; /* Faz a lista ocupar o espaço disponível */
+            overflow-y: auto; /* Scroll vertical SÓ para a lista */
+            margin-bottom: 15px;
+            border: 1px solid var(--boss-border-color);
+            border-radius: var(--border-radius);
+            padding: 8px;
+            min-height: 150px; /* Altura mínima para a lista não sumir */
+            
+            /* === CORREÇÃO APLICADA AQUI === */
+            display: flex;
+            flex-direction: column;
+            align-items: stretch; /* Faz os itens filhos esticarem horizontalmente */
+            justify-content: flex-start; /* Alinha os itens ao topo */
+        }
+        .catalogo-bolsa-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 5px; border-bottom: 1px solid #eee;
+            flex-shrink: 0; /* Evita que o item encolha sob pressão */
+        }
+        .catalogo-bolsa-item:last-child { border-bottom: none; }
+        .catalogo-bolsa-item label {
+            flex-grow: 1; font-size: 0.9em; margin-right: 10px;
+            display: flex; flex-direction: column;
+        }
+        .catalogo-bolsa-item label .item-name { font-weight: 500; }
+        .catalogo-bolsa-item label .item-stock-info { font-size: 0.8em; color: var(--text-muted); }
+        .catalogo-bolsa-item input[type="number"] {
+            width: 70px; padding: 8px; text-align: center;
+            border: 1px solid var(--boss-border-color-strong);
+            border-radius: var(--border-radius); font-size: 0.9em;
+            flex-shrink: 0; /* Impede que o input encolha demais */
+        }
+        .catalogo-bolsa-item input[type="number"]:focus {
+            border-color: var(--boss-yellow); outline: none;
+            box-shadow: 0 0 0 2px var(--boss-yellow-light);
+        }
+        #confirmar-bolsa-btn {
+            background-color: var(--boss-yellow); color: var(--boss-text-on-yellow);
+            width: 100%; padding: 12px; font-size: 1em; border: none;
+            border-radius: var(--border-radius); cursor: pointer; font-weight: 600;
+            text-transform: uppercase; transition: background-color 0.2s ease;
+            flex-shrink: 0; /* Botão não encolhe */
+        }
+        #confirmar-bolsa-btn:hover { background-color: var(--boss-yellow-dark); }
+        #confirmar-bolsa-btn i { margin-right: 8px; }
+
+        /* MODAL PIX */
+        #pix-qrcode-modal .modal-content-wrapper { max-width: 400px; text-align: center; }
+        #pix-qrcode-modal .pix-instructions-text { font-size: 0.9em; color: var(--text-muted); margin-bottom: 15px; }
+        #qrcode-canvas-container {
+            margin: 15px auto; border: 2px solid var(--boss-yellow);
+            border-radius: var(--border-radius); background-color: white;
+            padding: 10px; display: inline-block;
+            min-width: 200px; min-height: 200px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #qrcode-canvas-container img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+        #pix-copia-cola-area { width: 100%; padding: 10px; margin-top: 10px;
+            border: 1px solid var(--boss-border-color); border-radius: var(--border-radius);
+            font-size: 0.8em; word-break: break-all; background-color: var(--boss-background-main);
+            text-align: left; resize: none; font-family: monospace;
+        }
+        #copy-pix-code-btn {
+            background-color: var(--boss-yellow); color: var(--boss-text-on-yellow);
+            padding: 10px 15px; margin-top: 10px; border: none;
+            border-radius: var(--border-radius); cursor: pointer; font-size: 0.9em;
+            font-weight: 600; transition: background-color 0.2s ease;
+        }
+        #copy-pix-code-btn:hover { background-color: var(--boss-yellow-dark); }
+        #copy-pix-code-btn i { margin-right: 6px; }
+        #pix-payment-status-text { margin-top:12px; font-weight:600; font-size: 0.9em; }
+        #pix-key-info-text { font-size:0.8em; margin-top:10px; color: var(--text-muted); }
+        #pix-sale-actions { margin-top: 15px; }
+        #btn-close-pix-and-clear {
+            background-color: var(--text-muted); color: white;
+            padding: 10px 15px; border: none; border-radius: var(--border-radius);
+            cursor: pointer; font-size: 0.9em; font-weight: 600;
+        }
+        #btn-close-pix-and-clear:hover { background-color: var(--boss-text-dark); }
+
+        /* MENSAGENS DE FEEDBACK (Loading, Erro, Vazio) */
+        .feedback-message {
+            margin: 20px auto;
+            text-align:center; font-size: 0.9em;
+            padding: 15px; color: var(--text-muted);
+            width: fit-content;
+        }
+        #cart-items-list .feedback-message { margin: 0; width: 100%; }
+        .feedback-message.error { color: var(--danger-color); background-color: #fdd; border-radius: var(--border-radius);}
+        .feedback-message.loading i { margin-right: 8px; animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="top-header">
+            <h1><i class="fas fa-bolt"></i> Venda Rápida</h1>
+            <button id="btn-montar-bolsa-main" class="btn-montar-bolsa"><i class="fas fa-shopping-bag"></i> Bolsa</button>
+        </header>
+
+        <div class="venda-content-area">
+            <div id="product-grid">
+                <p class="feedback-message loading" id="loading-indicator-grid"><i class="fas fa-spinner"></i>Carregando...</p>
+            </div>
+
+            <div id="cart-and-checkout-area">
+                <ul id="cart-items-list">
+                </ul>
+                <div id="cart-summary">
+                    <div id="cart-total-display">Total: R$ 0,00</div>
+                </div>
+
+                <div id="payment-options-selector">
+                    <h3>Pagamento:</h3>
+                    <div class="payment-methods-container">
+                        <button class="payment-method-btn pix" data-method="PIX"><i class="fas fa-qrcode"></i>PIX</button>
+                        <button class="payment-method-btn card" data-method="Débito"><i class="fas fa-credit-card"></i>Débito</button>
+                        <button class="payment-method-btn card" data-method="Crédito"><i class="far fa-credit-card"></i>Crédito</button>
+                        <button class="payment-method-btn" data-method="Dinheiro"><i class="fas fa-money-bill-wave"></i>Dinheiro</button>
+                    </div>
+                </div>
+                <div id="finalize-sale-btn-container">
+                    <button id="finalize-sale-btn" disabled><i class="fas fa-check-circle"></i> Finalizar Venda</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="montar-bolsa-modal" class="modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-header-area">
+                <h2><i class="fas fa-shopping-bag"></i> Montar Bolsa de Venda</h2>
+                <button id="close-montar-bolsa-modal-btn" class="modal-close-button">&times;</button>
+            </div>
+            <p class="modal-description-text">Selecione os produtos e quantidades que levará para vender (máx: estoque atual).</p>
+            <div id="lista-catalogo-para-bolsa">
+                <p class="feedback-message loading"><i class="fas fa-spinner"></i>Carregando catálogo...</p>
+            </div>
+            <button id="confirmar-bolsa-btn"><i class="fas fa-check"></i> Confirmar Bolsa</button>
+        </div>
+    </div>
+
+    <div id="pix-qrcode-modal" class="modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-header-area">
+                <h2><i class="fas fa-qrcode"></i> Pagamento via PIX</h2>
+                <button id="close-pix-modal-btn" class="modal-close-button">&times;</button>
+            </div>
+            <p class="pix-instructions-text">Escaneie o QR Code ou use o "Copia e Cola":</p>
+            <div id="qrcode-canvas-container"></div>
+            <textarea id="pix-copia-cola-area" rows="3" readonly title="PIX Copia e Cola"></textarea>
+            <button id="copy-pix-code-btn"><i class="fas fa-copy"></i> Copiar Código</button>
+            <p id="pix-key-info-text">Chave PIX: [Sua Chave]</p>
+            <p id="pix-payment-status-text"></p>
+            <div id="pix-sale-actions">
+                <button id="btn-close-pix-and-clear"><i class="fas fa-check-double"></i> Venda Concluída (Fechar)</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, Timestamp, runTransaction, orderBy, query } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD5DNTmLpQZWihjDDGHkFa5S5zuEJHquno", // SUA API KEY AQUI
+            authDomain: "bossexpress-6f223.firebaseapp.com",
+            projectId: "bossexpress-6f223",
+            storageBucket: "bossexpress-6f223.firebasestorage.app", // CORRIGIDO para .appspot.com ou .firebasestorage.app dependendo da sua config
+            messagingSenderId: "127302407767",
+            appId: "1:127302407767:web:c50d1adc02f6837c79f512",
+            measurementId: "G-W255R6N65R"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const productGridEl = document.getElementById("product-grid");
+        const loadingIndicatorGridEl = document.getElementById("loading-indicator-grid");
+
+        const cartItemsListEl = document.getElementById("cart-items-list");
+        const cartTotalDisplayEl = document.getElementById("cart-total-display");
+        const finalizeSaleBtnEl = document.getElementById("finalize-sale-btn");
+
+        const montarBolsaModalEl = document.getElementById("montar-bolsa-modal");
+        const listaCatalogoParaBolsaDivEl = document.getElementById("lista-catalogo-para-bolsa");
+        const confirmarBolsaBtnEl = document.getElementById("confirmar-bolsa-btn");
+        const closeMontarBolsaModalBtnEl = document.getElementById("close-montar-bolsa-modal-btn");
+        const btnMontarBolsaMainEl = document.getElementById("btn-montar-bolsa-main");
+
+        const pixModalEl = document.getElementById("pix-qrcode-modal");
+        const closePixModalBtnEl = document.getElementById("close-pix-modal-btn");
+        const qrcodeCanvasContainerEl = document.getElementById("qrcode-canvas-container");
+        const pixCopiaColaAreaEl = document.getElementById("pix-copia-cola-area");
+        const copyPixCodeBtnEl = document.getElementById("copy-pix-code-btn");
+        const pixPaymentStatusTextEl = document.getElementById("pix-payment-status-text");
+        const pixKeyInfoTextEl = document.getElementById("pix-key-info-text");
+        const btnClosePixAndClearEl = document.getElementById("btn-close-pix-and-clear");
+
+        const paymentMethodButtonsEl = document.querySelectorAll(".payment-method-btn");
+
+        let catalogoCompletoProdutos = [];
+        let bolsaDoVendedor = [];
+        let cart = [];
+        let selectedPaymentMethod = null;
+        let qrCodeInstance = null;
+        const localStorageBolsaKey = "bossExpressVendaRapidaBolsa_v2";
+
+        const showFeedback = (el, message, type = 'info') => {
+            if (!el) return;
+            const iconHtml = type === 'loading' ? '<i class="fas fa-spinner fa-spin"></i> ' : '';
+            el.innerHTML = `<p class="feedback-message ${type}">${iconHtml}${message}</p>`;
+            // Mantém os estilos flex do CSS para #lista-catalogo-para-bolsa se for ele
+            // Para outros, aplica os estilos de centralização se necessário.
+            if (el !== listaCatalogoParaBolsaDivEl) {
+                 el.style.display = 'flex';
+                 el.style.justifyContent = 'center';
+                 el.style.alignItems = 'center';
+            } else { // Para #lista-catalogo-para-bolsa, certifica-se que centraliza o feedback
+                el.style.justifyContent = 'center'; // O CSS já tem display:flex e flex-direction:column
+                el.style.alignItems = 'center';
+            }
+        };
+        const clearFeedback = (el) => {
+            if (!el) return;
+            el.innerHTML = '';
+            if (el !== productGridEl && el !== listaCatalogoParaBolsaDivEl) {
+                el.style.display = 'none';
+            } else if (el === listaCatalogoParaBolsaDivEl) {
+                // Restaura o alinhamento para o início da lista, mantendo flex-direction: column do CSS
+                el.style.justifyContent = 'flex-start';
+                el.style.alignItems = 'stretch'; // Garante que os itens preencham a largura
+            }
+        };
+
+        async function carregarCatalogoParaModalBolsa() {
+            showFeedback(listaCatalogoParaBolsaDivEl, 'Carregando catálogo...', 'loading');
+            console.log("FN: carregarCatalogoParaModalBolsa - INICIADA");
+            try {
+                const q = query(collection(db, "produtos"), orderBy("nome"));
+                const querySnapshot = await getDocs(q);
+                console.log(`FN: carregarCatalogoParaModalBolsa - Snapshot 'produtos'. Docs: ${querySnapshot.size}`);
+                catalogoCompletoProdutos = [];
+                if (querySnapshot.empty) console.log("FN: carregarCatalogoParaModalBolsa - Coleção 'produtos' vazia.");
+
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const produtoId = docSnap.id;
+                    console.log(`FN: carregarCatalogoParaModalBolsa - Processando ID: ${produtoId}`, data);
+
+                    const temNome = data.nome && String(data.nome).trim() !== "";
+                    const precoVendaEhNumero = typeof data.precoVenda === 'number' && !isNaN(data.precoVenda);
+                    const estoqueAtualNum = data.estoqueAtual !== undefined ? parseInt(data.estoqueAtual) : 0;
+
+                    console.log(`  Produto: "${data.nome}", PreçoVenda: ${data.precoVenda} (Tipo: ${typeof data.precoVenda}), Estoque: ${data.estoqueAtual}`);
+                    console.log(`  Condições: temNome=${temNome}, precoVendaEhNumero=${precoVendaEhNumero}`);
+
+                    if (temNome && precoVendaEhNumero) {
+                        catalogoCompletoProdutos.push({
+                            id: produtoId, nome: data.nome, precoVenda: data.precoVenda,
+                            estoqueAtualFS: estoqueAtualNum, unidade: data.unidade || 'UN'
+                        });
+                        console.log(`    >> ID: ${produtoId} ("${data.nome}") ADICIONADO ao catálogo.`);
+                    } else {
+                        console.log(`    >> ID: ${produtoId} ("${data.nome}") IGNORADO (Nome: ${data.nome}, Preço: ${data.precoVenda}, Tipo Preço: ${typeof data.precoVenda})`);
+                    }
+                });
+                console.log("FN: carregarCatalogoParaModalBolsa - Catálogo processado:", catalogoCompletoProdutos);
+                renderizarOpcoesModalBolsa();
+            } catch (error) {
+                console.error("FN: carregarCatalogoParaModalBolsa - ERRO CRÍTICO:", error);
+                showFeedback(listaCatalogoParaBolsaDivEl, 'Erro ao carregar. Verifique console (F12).', 'error');
+            }
+        }
+        function renderizarOpcoesModalBolsa() {
+            // Limpa feedback e restaura estilos para lista
+            clearFeedback(listaCatalogoParaBolsaDivEl);
+
+            if (catalogoCompletoProdutos.length === 0) {
+                showFeedback(listaCatalogoParaBolsaDivEl, 'Nenhum produto com nome e preço de venda válidos foi encontrado.');
+                return;
+            }
+
+            const bolsaAtualMap = new Map(bolsaDoVendedor.map(item => [item.id, item.quantidadeNaBolsa]));
+            catalogoCompletoProdutos.forEach(produto => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "catalogo-bolsa-item";
+                const quantidadeNaBolsaAtual = bolsaAtualMap.get(produto.id) || 0;
+                const estoqueLojaNum = produto.estoqueAtualFS;
+
+                itemDiv.innerHTML = `
+                    <label for="bolsa-${produto.id}">
+                        <span class="item-name">${produto.nome} (R$ ${produto.precoVenda.toFixed(2).replace('.',',')})</span>
+                        <span class="item-stock-info">Estoque Loja: ${estoqueLojaNum} ${produto.unidade}</span>
+                    </label>
+                    <input type="number" id="bolsa-${produto.id}" data-id="${produto.id}" data-nome="${produto.nome}" data-preco="${produto.precoVenda}" data-unidade="${produto.unidade}" data-estoque-loja="${estoqueLojaNum}" min="0" max="${estoqueLojaNum}" value="${quantidadeNaBolsaAtual}" placeholder="Qtde">`;
+                listaCatalogoParaBolsaDivEl.appendChild(itemDiv);
+                const inputQtde = itemDiv.querySelector('input[type="number"]');
+                inputQtde.addEventListener('input', (e) => {
+                    let val = parseInt(e.target.value); const max = parseInt(e.target.max);
+                    if (isNaN(val)) val = 0; if (val > max) e.target.value = max; if (val < 0) e.target.value = 0;
+                });
+            });
+        }
+        confirmarBolsaBtnEl.addEventListener("click", () => {
+            bolsaDoVendedor = [];
+            const inputs = listaCatalogoParaBolsaDivEl.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                let quantidade = parseInt(input.value); if (isNaN(quantidade) || quantidade < 0) quantidade = 0;
+                const estoqueLoja = parseInt(input.dataset.estoqueLoja);
+                if (quantidade > estoqueLoja) quantidade = estoqueLoja;
+                if (quantidade > 0) {
+                    bolsaDoVendedor.push({
+                        id: input.dataset.id, nome: input.dataset.nome, preco: parseFloat(input.dataset.preco),
+                        unidade: input.dataset.unidade, quantidadeNaBolsa: quantidade
+                    });
+                }
+            });
+            localStorage.setItem(localStorageBolsaKey, JSON.stringify(bolsaDoVendedor));
+            montarBolsaModalEl.style.display = "none";
+            renderizarProdutosDaBolsaNaGrade();
+            resetCartAndPayment();
+        });
+        function carregarBolsaDoLocalStorage() {
+            const bolsaSalva = localStorage.getItem(localStorageBolsaKey);
+            if (bolsaSalva) {
+                try { bolsaDoVendedor = JSON.parse(bolsaSalva); return true; }
+                catch (e) { console.error("Erro localStorage bolsa:", e); localStorage.removeItem(localStorageBolsaKey); return false; }
+            } return false;
+        }
+        function abrirModalMontarBolsa() { carregarCatalogoParaModalBolsa(); montarBolsaModalEl.style.display = "flex"; }
+        btnMontarBolsaMainEl.addEventListener("click", abrirModalMontarBolsa);
+        closeMontarBolsaModalBtnEl.addEventListener("click", () => montarBolsaModalEl.style.display = "none");
+
+        function renderizarProdutosDaBolsaNaGrade() {
+            clearFeedback(loadingIndicatorGridEl); productGridEl.innerHTML = '';
+            if (!bolsaDoVendedor || bolsaDoVendedor.length === 0) {
+                showFeedback(productGridEl, 'Sua bolsa está vazia. Clique em "Bolsa" para adicionar itens.'); return;
+            }
+            let itensRealmenteDisponiveisNaBolsa = false;
+            bolsaDoVendedor.forEach(productInBag => {
+                const card = document.createElement("div"); card.className = "product-card"; card.dataset.productId = productInBag.id;
+                if (productInBag.quantidadeNaBolsa <= 0) card.classList.add("out-of-stock-bolsa");
+                else { itensRealmenteDisponiveisNaBolsa = true; card.addEventListener("click", () => adicionarProdutoAoCarrinho(productInBag.id)); }
+                card.innerHTML = `<div class="product-name">${productInBag.nome}</div> <div class="product-price">R$ ${productInBag.preco.toFixed(2).replace('.', ',')}</div> <div class="product-stock-bolsa">Na Bolsa: ${productInBag.quantidadeNaBolsa} ${productInBag.unidade}</div>`;
+                productGridEl.appendChild(card);
+            });
+            if (!itensRealmenteDisponiveisNaBolsa && bolsaDoVendedor.length > 0) {
+                showFeedback(productGridEl, 'Todos os itens da sua bolsa foram vendidos! Monte uma nova bolsa.');
+            }
+        }
+
+        function adicionarProdutoAoCarrinho(productId) {
+            const produtoNaBolsa = bolsaDoVendedor.find(p => p.id === productId);
+            if (!produtoNaBolsa || produtoNaBolsa.quantidadeNaBolsa <= 0) { alert("Esgotado na bolsa!"); return; }
+            const cartItem = cart.find(item => item.id === productId);
+            if (cartItem) { if (cartItem.quantidadeNoCarrinho < produtoNaBolsa.quantidadeNaBolsa) cartItem.quantidadeNoCarrinho++; else { alert(`Limite de ${produtoNaBolsa.nome} na bolsa.`); return; }}
+            else cart.push({ id: produtoNaBolsa.id, nome: produtoNaBolsa.nome, preco: produtoNaBolsa.preco, quantidadeNoCarrinho: 1 });
+            atualizarDisplayDoCarrinho();
+        }
+        function atualizarDisplayDoCarrinho() {
+            cartItemsListEl.innerHTML = ""; let total = 0;
+            const emptyCartLi = cartItemsListEl.querySelector('#cart-empty-message'); // Mudou de classe para id
+            if (emptyCartLi) emptyCartLi.remove();
+
+            if (cart.length === 0) {
+                const li = document.createElement("li"); li.className = "feedback-message"; li.id = "cart-empty-message";
+                li.textContent = "Carrinho vazio"; cartItemsListEl.appendChild(li);
+            } else {
+                cart.forEach(item => {
+                    const produtoNaBolsa = bolsaDoVendedor.find(p => p.id === item.id);
+                    const maxQuantityInBag = produtoNaBolsa ? produtoNaBolsa.quantidadeNaBolsa : 0;
+                    const li = document.createElement("li");
+                    li.innerHTML = `<div class="cart-item-details"><span class="cart-item-name">${item.nome}</span><span class="cart-item-price">(${item.quantidadeNoCarrinho}x R$ ${item.preco.toFixed(2).replace('.',',')})</span></div><div class="cart-item-controls"><button class="decrease-qty-btn" data-id="${item.id}" title="Diminuir"><i class="fas fa-minus"></i></button><span class="cart-item-quantity">${item.quantidadeNoCarrinho}</span><button class="increase-qty-btn" data-id="${item.id}" title="Aumentar" ${item.quantidadeNoCarrinho >= maxQuantityInBag ? 'disabled' : ''}><i class="fas fa-plus"></i></button><button class="remove-item-btn" data-id="${item.id}" title="Remover"><i class="fas fa-times"></i></button></div>`;
+                    cartItemsListEl.appendChild(li); total += item.preco * item.quantidadeNoCarrinho;
+                });
+            }
+            cartTotalDisplayEl.textContent = `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+            finalizeSaleBtnEl.disabled = cart.length === 0 || !selectedPaymentMethod;
+        }
+        cartItemsListEl.addEventListener('click', (event) => {
+            const target = event.target.closest('button'); if (!target) return;
+            const itemId = target.dataset.id; const itemNoCarrinho = cart.find(i => i.id === itemId); if (!itemNoCarrinho) return;
+            const produtoNaBolsa = bolsaDoVendedor.find(p => p.id === itemId); const maxQuantityInBag = produtoNaBolsa ? produtoNaBolsa.quantidadeNaBolsa : 0;
+            if (target.classList.contains('increase-qty-btn')) { if (itemNoCarrinho.quantidadeNoCarrinho < maxQuantityInBag) itemNoCarrinho.quantidadeNoCarrinho++; }
+            else if (target.classList.contains('decrease-qty-btn')) { itemNoCarrinho.quantidadeNoCarrinho--; if (itemNoCarrinho.quantidadeNoCarrinho <= 0) cart = cart.filter(i => i.id !== itemId); }
+            else if (target.classList.contains('remove-item-btn')) cart = cart.filter(i => i.id !== itemId);
+            atualizarDisplayDoCarrinho();
+        });
+
+        paymentMethodButtonsEl.forEach(button => {
+            button.addEventListener('click', () => {
+                selectedPaymentMethod = button.dataset.method;
+                paymentMethodButtonsEl.forEach(btn => btn.classList.remove('selected'));
+                button.classList.add('selected');
+                atualizarDisplayDoCarrinho();
+            });
+        });
+        function resetCartAndPayment() {
+            cart = []; selectedPaymentMethod = null;
+            paymentMethodButtonsEl.forEach(btn => btn.classList.remove('selected'));
+            atualizarDisplayDoCarrinho();
+        }
+
+        function formatPixValue(value) { return value.toFixed(2).toString(); }
+        function generatePixPayload(chavePix, nomeBeneficiario, cidadeBeneficiario, valor, identificadorTx = 'VENTABOSS') {
+            const payloadFormatIndicator = "000201"; const pointOfInitiationMethod = "010211";
+            const gui = "br.gov.bcb.pix"; const chave = String(chavePix).replace(/\D/g, '');
+            const merchantAccountInfo_TagChave = "01" + String(chave.length).padStart(2, '0') + chave;
+            const merchantAccountInfo_Valor = "00" + String(gui.length).padStart(2, '0') + gui + merchantAccountInfo_TagChave;
+            const merchantAccountInfo = "26" + String(merchantAccountInfo_Valor.length).padStart(2, '0') + merchantAccountInfo_Valor;
+            const merchantCategoryCode = "0000"; const transactionCurrency = "986";
+            const valorFormatado = formatPixValue(parseFloat(valor));
+            const transactionAmount = "54" + String(valorFormatado.length).padStart(2, '0') + valorFormatado;
+            const countryCode = "BR";
+            const beneficiarioNomeNorm = String(nomeBeneficiario).normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 25).toUpperCase();
+            const merchantName = "59" + String(beneficiarioNomeNorm.length).padStart(2, '0') + beneficiarioNomeNorm;
+            const beneficiarioCidadeNorm = String(cidadeBeneficiario).normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 15).toUpperCase();
+            const merchantCity = "60" + String(beneficiarioCidadeNorm.length).padStart(2, '0') + beneficiarioCidadeNorm;
+            const txIdLimpo = String(identificadorTx).replace(/[^a-zA-Z0-9]/g, '').substring(0,25) || '***';
+            const additionalDataField_TXIDVal = "05" + String(txIdLimpo.length).padStart(2, '0') + txIdLimpo;
+            const additionalDataField = "62" + String(additionalDataField_TXIDVal.length).padStart(2, '0') + additionalDataField_TXIDVal;
+            let payload = `${payloadFormatIndicator}${pointOfInitiationMethod}${merchantAccountInfo}52${String(merchantCategoryCode.length).padStart(2,'0')}${merchantCategoryCode}53${String(transactionCurrency.length).padStart(2,'0')}${transactionCurrency}${transactionAmount}58${String(countryCode.length).padStart(2,'0')}${countryCode}${merchantName}${merchantCity}${additionalDataField}6304`;
+            payload += calculateCRC16(payload.substring(0, payload.length - 4));
+            return payload;
+        }
+        function calculateCRC16(payload) {
+            let crc = 0xFFFF; const polinomio = 0x1021;
+            for (let i = 0; i < payload.length; i++) {
+                crc ^= (payload.charCodeAt(i) << 8);
+                for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ polinomio : crc << 1;
+            }
+            return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        finalizeSaleBtnEl.addEventListener("click", async () => {
+            if (finalizeSaleBtnEl.disabled) return;
+            const totalVenda = cart.reduce((sum, item) => sum + (item.preco * item.quantidadeNoCarrinho), 0);
+            finalizeSaleBtnEl.disabled = true; finalizeSaleBtnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+            if (selectedPaymentMethod === "PIX") {
+                const chavePix = "43152513801"; const nomeBeneficiario = "Boss Express"; const cidadeBeneficiario = "ITU"; /* Substitua */
+                pixKeyInfoTextEl.textContent = `Chave PIX (CPF): ${chavePix}`;
+                const identificadorTransacao = "BE" + Date.now().toString().slice(-8);
+                const pixPayload = generatePixPayload(chavePix, nomeBeneficiario, cidadeBeneficiario, totalVenda, identificadorTransacao);
+                if(qrCodeInstance) { qrCodeInstance.clear(); qrcodeCanvasContainerEl.innerHTML = ''; }
+                try {
+                    qrCodeInstance = new QRCode(qrcodeCanvasContainerEl, { text: pixPayload, width: 220, height: 220, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M });
+                } catch (e) { console.error("Erro QRCode:", e); qrcodeCanvasContainerEl.innerHTML = "<p class='feedback-message error'>Erro QR Code.</p>"; }
+                pixCopiaColaAreaEl.value = pixPayload;
+                pixPaymentStatusTextEl.textContent = `Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}. Aguardando...`;
+                pixModalEl.style.display = "flex";
+                await registrarVendaEAtualizarEstoque(totalVenda, selectedPaymentMethod, { payloadPix: pixPayload, idTxPix: identificadorTransacao, chavePixDestino: chavePix });
+            } else {
+                try {
+                    await registrarVendaEAtualizarEstoque(totalVenda, selectedPaymentMethod);
+                    alert(`Venda de R$ ${totalVenda.toFixed(2).replace('.',',')} com ${selectedPaymentMethod} finalizada!`);
+                    resetCartAndPayment(); renderizarProdutosDaBolsaNaGrade();
+                } catch (error) { alert(`Erro venda: ${error.message || String(error)}`); }
+            }
+            finalizeSaleBtnEl.disabled = cart.length === 0 || !selectedPaymentMethod;
+            finalizeSaleBtnEl.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Venda';
+        });
+
+        async function registrarVendaEAtualizarEstoque(valorTotalVenda, formaDePagamento, dadosPix = null) {
+            const itensVendidosCopia = JSON.parse(JSON.stringify(cart));
+            await runTransaction(db, async (transaction) => {
+                console.log("Iniciando transação Firestore...");
+                const produtosParaAtualizar = [];
+                for (const itemVendido of itensVendidosCopia) {
+                    const produtoFirestoreRef = doc(db, "produtos", itemVendido.id);
+                    console.log(`Lendo produto: ${itemVendido.id}`);
+                    const produtoFirestoreDoc = await transaction.get(produtoFirestoreRef);
+                    if (!produtoFirestoreDoc.exists()) throw new Error(`Produto "${itemVendido.nome}" (ID: ${itemVendido.id}) não encontrado.`);
+                    const dadosProduto = produtoFirestoreDoc.data();
+                    const estoqueAtualFS = dadosProduto.estoqueAtual || 0;
+                    const novoEstoqueFS = estoqueAtualFS - itemVendido.quantidadeNoCarrinho;
+                    if (novoEstoqueFS < 0) throw new Error(`Estoque de "${itemVendido.nome}" ficaria negativo.`);
+                    produtosParaAtualizar.push({ ref: produtoFirestoreRef, novoEstoque: novoEstoqueFS });
+                    console.log(`Produto ${itemVendido.id} lido. Novo estoque: ${novoEstoqueFS}`);
+                }
+                console.log("Fase de leitura da transação concluída.");
+                const vendaData = {
+                    itens: itensVendidosCopia.map(item => ({ produtoId: item.id, nome: item.nome, precoUnitario: item.preco, quantidade: item.quantidadeNoCarrinho, subtotal: item.preco * item.quantidadeNoCarrinho })),
+                    valorTotal: valorTotalVenda, dataVenda: Timestamp.now(), formaPagamento: formaDePagamento,
+                    statusPagamento: (formaDePagamento === "PIX") ? "pendente_confirmacao_cliente" : "concluido"
+                };
+                if (formaDePagamento === "PIX" && dadosPix) {
+                    vendaData.payloadPix = dadosPix.payloadPix; vendaData.idTxPix = dadosPix.idTxPix; vendaData.chavePixDestino = dadosPix.chavePixDestino;
+                }
+                const vendaDocRef = doc(collection(db, "vendas_rapidas"));
+                transaction.set(vendaDocRef, vendaData); console.log("Venda registrada na transação.");
+                for (const prod of produtosParaAtualizar) {
+                    transaction.update(prod.ref, { estoqueAtual: prod.novoEstoque });
+                    console.log(`Estoque do produto ${prod.ref.id} atualizado para ${prod.novoEstoque}.`);
+                }
+                console.log("Fase de escrita da transação concluída.");
+            });
+            itensVendidosCopia.forEach(itemVendido => {
+                const itemNaBolsa = bolsaDoVendedor.find(p => p.id === itemVendido.id);
+                if (itemNaBolsa) { itemNaBolsa.quantidadeNaBolsa -= itemVendido.quantidadeNoCarrinho; if (itemNaBolsa.quantidadeNaBolsa < 0) itemNaBolsa.quantidadeNaBolsa = 0; }
+            });
+            localStorage.setItem(localStorageBolsaKey, JSON.stringify(bolsaDoVendedor));
+            console.log("Bolsa local (localStorage) atualizada.");
+        }
+
+        btnClosePixAndClearEl.addEventListener("click", () => {
+            pixModalEl.style.display = "none"; resetCartAndPayment(); renderizarProdutosDaBolsaNaGrade();
+            pixPaymentStatusTextEl.textContent = ''; qrcodeCanvasContainerEl.innerHTML = '';
+            if(qrCodeInstance) qrCodeInstance.clear();
+        });
+        copyPixCodeBtnEl.addEventListener("click", () => {
+            pixCopiaColaAreaEl.select();
+            try { document.execCommand("copy"); alert("Código PIX Copiado!"); }
+            catch(err) { alert("Falha ao copiar."); }
+        });
+        function closeModalOnClickOutside(event) {
+            if (event.target === montarBolsaModalEl) montarBolsaModalEl.style.display = "none";
+            // Adicionado para fechar modal PIX também ao clicar fora
+            if (event.target === pixModalEl) pixModalEl.style.display = "none";
+        }
+        window.addEventListener("click", closeModalOnClickOutside);
+        window.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                if (montarBolsaModalEl.style.display === "flex") montarBolsaModalEl.style.display = "none";
+                if (pixModalEl.style.display === "flex") pixModalEl.style.display = "none";
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const initialLoadingEl = loadingIndicatorGridEl || productGridEl;
+            showFeedback(initialLoadingEl, 'Inicializando...', 'loading');
+            if (!db) { showFeedback(initialLoadingEl, 'Erro de conexão com o banco de dados.', 'error'); return; }
+            if (!carregarBolsaDoLocalStorage() || bolsaDoVendedor.length === 0) {
+                clearFeedback(initialLoadingEl); abrirModalMontarBolsa();
+                showFeedback(productGridEl, 'Monte sua bolsa para começar a vender.');
+            } else { renderizarProdutosDaBolsaNaGrade(); }
+            atualizarDisplayDoCarrinho();
+            console.log("Boss Express - Venda Rápida Pronta.");
+        });
+    </script>
+</body>
+</html>

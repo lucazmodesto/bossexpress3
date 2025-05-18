@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Boss Express</title> 
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif; /* Mantendo a fonte original, pode ser alterada se desejar */
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 250px;
+      background-color: #FFC300; /* Amarelo Principal (um pouco mais vibrante) */
+      color: #424242; /* Cinza escuro para texto, bom contraste com amarelo */
+      transition: all 0.3s ease;
+      overflow-y: auto;
+      flex-shrink: 0;
+      border-right: 1px solid #E0A800; /* Borda levemente mais escura que o fundo */
+    }
+
+    .sidebar.hidden {
+      width: 0;
+      overflow: hidden;
+    }
+
+    .logo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 15px;
+      border-bottom: 1px solid #E0A800; /* Amarelo mais escuro para a borda */
+      background-color: #FFB300; /* Um tom de amarelo ligeiramente diferente para o logo, opcional */
+    }
+
+    .logo img {
+      max-width: 75%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      padding: 16px 22px;
+      text-decoration: none;
+      color: #333333; /* Preto ou cinza bem escuro para texto do link */
+      font-size: 16px;
+      border-bottom: 1px solid #E0A800; /* Amarelo mais escuro para a borda */
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .sidebar a i {
+      margin-right: 12px;
+      font-size: 18px;
+      width: 20px;
+      text-align: center;
+      color: #545454; /* Ícones um pouco mais suaves que o texto */
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      background-color: #007BFF; /* Azul para contraste no hover - ou um amarelo mais escuro se preferir */
+      /* background-color: #E0A800; */ /* Alternativa: Amarelo mais escuro para hover */
+      color: #FFFFFF; /* Texto branco no hover */
+    }
+     .sidebar a:hover i, .sidebar a.active i {
+        color: #FFFFFF; /* Ícones brancos no hover também */
+     }
+
+
+    .toggle-btn {
+      position: absolute;
+      top: 18px;
+      left: 250px;
+      z-index: 1000;
+      background-color: #007BFF; /* Azul para o botão (para destaque) */
+      /* background-color: #E0A800; */ /* Alternativa: Amarelo escuro para o botão */
+      color: white;
+      padding: 10px 12px;
+      border-radius: 0 5px 5px 0;
+      cursor: pointer;
+      transition: left 0.3s ease;
+      box-shadow: 1px 0px 4px rgba(0,0,0,0.15);
+    }
+
+    .toggle-btn i {
+      font-size: 19px;
+    }
+
+    iframe {
+      flex: 1;
+      width: 100%;
+      height: 100vh;
+      border: none;
+      transition: margin-left 0.3s ease;
+      background-color: #f8f9fa; /* Fundo do conteúdo principal bem claro */
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+      .toggle-btn {
+        left: 0;
+      }
+      .sidebar {
+        position: absolute;
+        height: 100%;
+        z-index: 999;
+      }
+      .sidebar.hidden {
+        transform: translateX(-100%);
+      }
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      .container {
+        flex-direction: column;
+      }
+      iframe {
+        height: calc(100vh - 50px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sidebar a {
+        font-size: 15px;
+        padding: 14px 18px;
+      }
+      .logo img {
+        max-width: 65%;
+      }
+      .toggle-btn {
+        top: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toggle-btn" onclick="toggleMenu()">
+    <i class="fas fa-bars"></i>
+  </div>
+
+  <div class="container">
+    <div class="sidebar" id="sidebar">
+      <div class="logo">
+        <img src="img/logo.png" alt="Logo Boss Express">
+      </div>
+      
+      <a href="cadastro_produtos.html" target="conteudo"><i class="fas fa-box-open"></i>Cadastro de Produtos</a>
+      <a href="venda_rapida.html" target="conteudo"><i class="fas fa-bolt"></i>Venda Rápida</a>
+      <a href="relatorio_vendas.html" target="conteudo"><i class="fas fa-chart-line"></i>Relatório de Vendas</a>
+
+    </div>
+
+    <iframe name="conteudo" src="relatorio_vendas.html"></iframe>
+  </div>
+
+<script>
+    let menuAberto = true;
+
+    function toggleMenu() {
+        const sidebar = document.querySelector('.sidebar');
+        const iframe = document.querySelector('iframe');
+        const toggleBtn = document.querySelector('.toggle-btn');
+        const toggleIcon = toggleBtn.querySelector('i');
+
+        menuAberto = !menuAberto; 
+
+        if (!menuAberto) { // Menu está fechado
+            sidebar.classList.add('hidden');
+            sidebar.style.width = '0';
+            iframe.style.marginLeft = '0';
+            toggleBtn.style.left = '0';
+            toggleIcon.classList.remove('fa-times'); 
+            toggleIcon.classList.add('fa-bars');
+        } else { // Menu está aberto
+            sidebar.classList.remove('hidden');
+            const sidebarWidth = window.innerWidth <= 480 ? '100%' : '250px';
+            sidebar.style.width = sidebarWidth;
+            iframe.style.marginLeft = window.innerWidth <= 480 ? '0' : sidebarWidth;
+            toggleBtn.style.left = window.innerWidth <= 480 ? '0' : sidebarWidth;
+            toggleIcon.classList.remove('fa-bars');
+            toggleIcon.classList.add('fa-times'); 
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggleIcon = document.querySelector('.toggle-btn i');
+        if (menuAberto) {
+             toggleIcon.classList.remove('fa-bars');
+             toggleIcon.classList.add('fa-times'); 
+        } else {
+            toggleIcon.classList.remove('fa-times');
+            toggleIcon.classList.add('fa-bars');
+        }
+
+        const links = document.querySelectorAll(".sidebar a");
+        links.forEach(link => {
+            link.addEventListener("click", (event) => {
+                // Adiciona a classe 'active' ao link clicado e remove dos outros
+                links.forEach(l => l.classList.remove('active'));
+                event.currentTarget.classList.add('active');
+
+                if (window.innerWidth <= 768 && menuAberto) {
+                    toggleMenu(); 
+                }
+            });
+        });
+        
+        // Simula um clique no primeiro link para defini-lo como ativo inicialmente, se desejar.
+        if (links.length > 0) {
+            // links[0].classList.add('active'); // descomente para ativar o primeiro item por padrão
+        }
+
+        // Ajusta estado inicial do menu no carregamento
+        // Se menuAberto for true por padrão, o menu deve estar aberto.
+        // A função toggleMenu inverte menuAberto na primeira linha, então precisamos chamar com o estado "oposto"
+        // para que ele configure corretamente.
+        if (!menuAberto) { // Se o menuAberto é true (estado "aberto" desejado)
+            menuAberto = true; // Restaura para o toggle funcionar como esperado
+             toggleMenu(); // Isso vai fechar
+             menuAberto = true; // Força o estado desejado
+        } else { // Se menuAberto é false (estado "fechado" desejado)
+            menuAberto = false;
+            toggleMenu(); // Isso vai abrir
+            menuAberto = false;
+        }
+         // Simplificação para estado inicial:
+        // Se o menu deve começar aberto:
+        const initialSidebarWidth = window.innerWidth <= 480 ? '100%' : '250px';
+        document.querySelector('.sidebar').style.width = initialSidebarWidth;
+        document.querySelector('iframe').style.marginLeft = window.innerWidth <= 480 ? '0' : initialSidebarWidth;
+        document.querySelector('.toggle-btn').style.left = window.innerWidth <= 480 ? '0' : initialSidebarWidth;
+        menuAberto = true; // Sincroniza a variável
+        document.querySelector('.toggle-btn i').classList.remove('fa-bars');
+        document.querySelector('.toggle-btn i').classList.add('fa-times');
+
+
+        // Se o menu deve começar fechado (descomente abaixo e comente o bloco "começar aberto" acima):
+        /*
+        document.querySelector('.sidebar').style.width = '0';
+        document.querySelector('iframe').style.marginLeft = '0';
+        document.querySelector('.toggle-btn').style.left = '0';
+        document.querySelector('.toggle-btn i').classList.remove('fa-times');
+        document.querySelector('.toggle-btn i').classList.add('fa-bars');
+        menuAberto = false; // Sincroniza a variável
+        */
+
+
+    });
+</script>
+
+</body>
+</html>
