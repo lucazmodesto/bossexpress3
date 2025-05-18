@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pagamentos Pendentes - Boss Express</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+    <style>
+        /* Copie os estilos base de :root, body, .app-container, .top-header, .modal, etc. de venda_rapida.html
+           ou crie um arquivo CSS separado e importe-o em ambas as páginas.
+           Abaixo, apenas estilos específicos para esta página. */
+        :root {
+            --boss-yellow: #FFC107; --boss-yellow-dark: #E0A800; --boss-yellow-light: #FFF3CD;
+            --boss-text-dark: #333333; --boss-text-on-yellow: #333333; --boss-text-light: #FFFFFF;
+            --boss-background-main: #f8f9fa; --boss-background-content: #ffffff;
+            --boss-border-color: #dee2e6; --boss-border-color-strong: #c0c0c0;
+            --success-color: #28a745; --danger-color: #dc3545; --info-color: #007bff;
+            --pending-color: #ffc107; --text-muted: #6c757d;
+            --shadow-sm: 0 0.125rem 0.25rem rgba(0,0,0,0.075); --shadow-md: 0 0.3rem 0.75rem rgba(0,0,0,0.1);
+            --border-radius: 0.375rem; --font-family: Arial, sans-serif;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-family); background-color: var(--boss-background-main);
+            color: var(--boss-text-dark); line-height: 1.6; font-size: 15px;
+            display: flex; justify-content: center; padding-top: 10px;
+        }
+        .app-container {
+            width: 100%; max-width: 520px; /* Um pouco mais largo */
+            height: calc(100vh - 20px); max-height: 800px; margin: 0 auto;
+            display: flex; flex-direction: column; background-color: var(--boss-background-content);
+            border-radius: var(--border-radius); box-shadow: var(--shadow-md); overflow: hidden;
+        }
+        .top-header {
+            background-color: var(--boss-yellow); color: var(--boss-text-on-yellow); padding: 10px 15px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--boss-yellow-dark); flex-shrink: 0;
+        }
+        .top-header h1 { font-size: 1.15em; margin: 0; font-weight: 600; }
+        .top-header h1 i { margin-right: 8px; }
+        .top-header .header-action-btn {
+            background-color: var(--boss-yellow-dark); color: var(--boss-text-light); border: none;
+            padding: 6px 10px; font-size: 0.8em; border-radius: var(--border-radius);
+            font-weight: 600; cursor: pointer; transition: background-color 0.2s ease;
+            text-decoration: none; display: inline-flex; align-items: center;
+        }
+        .top-header .header-action-btn:hover { background-color: #D18C00; }
+        .top-header .header-action-btn i { margin-right: 5px; }
+
+        .content-area-pendentes { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        .lista-pagamentos-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; border-bottom: 1px solid var(--boss-border-color); padding-bottom: 10px;
+        }
+        .lista-pagamentos-header h2 { font-size: 1.3em; margin: 0; }
+        #refresh-pendentes-btn {
+            background: none; border: 1px solid var(--boss-border-color-strong); color: var(--boss-text-dark);
+            padding: 6px 10px; border-radius: var(--border-radius); cursor: pointer;
+        }
+        #refresh-pendentes-btn:hover { background-color: var(--boss-yellow-light); }
+
+        .pagamento-pendente-item {
+            background-color: var(--boss-background-content);
+            border: 1px solid var(--boss-border-color);
+            border-left: 4px solid var(--pending-color);
+            border-radius: var(--border-radius);
+            padding: 12px 15px; margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        .pagamento-pendente-item h3 { margin-top: 0; margin-bottom: 8px; font-size: 1.1em; color: var(--boss-text-dark); }
+        .pagamento-pendente-item p { margin-bottom: 4px; font-size: 0.9em; line-height: 1.4; }
+        .pagamento-pendente-item .item-label { font-weight: 500; color: var(--text-muted); }
+        .pagamento-pendente-item .item-valor { font-weight: 600; color: var(--danger-color); }
+
+        .pagamento-pendente-item .produtos-comprados-lista {
+            font-size: 0.8em; color: var(--text-muted);
+            max-height: 70px; overflow-y: auto;
+            border: 1px dashed #eee; padding: 8px; margin-top: 8px; border-radius: var(--border-radius);
+        }
+        .pagamento-pendente-item .produtos-comprados-lista ul { list-style: disc; padding-left: 18px; margin:0; }
+
+        .pagamento-pendente-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .pagamento-pendente-actions button {
+            padding: 8px 12px; font-size: 0.85em; border-radius: var(--border-radius);
+            border: none; cursor: pointer; font-weight: 500;
+            display: inline-flex; align-items: center;
+        }
+        .pagamento-pendente-actions button i { margin-right: 6px; }
+        .btn-whatsapp { background-color: #25D366; color: white; }
+        .btn-whatsapp:hover { background-color: #1DA851; }
+        .btn-marcar-pago { background-color: var(--success-color); color: white; }
+        .btn-marcar-pago:hover { background-color: #218838; }
+        .feedback-message-pendentes { text-align: center; padding: 20px; color: var(--text-muted); }
+        .feedback-message-pendentes i { margin-right: 8px; animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="top-header">
+            <h1><i class="fas fa-hourglass-half"></i> Pagamentos Pendentes</h1>
+            <div class="header-buttons-group">
+                <a href="venda_rapida.html" class="header-action-btn"><i class="fas fa-arrow-left"></i> Voltar Vendas</a>
+            </div>
+        </header>
+
+        <div class="content-area-pendentes">
+            <div class="lista-pagamentos-header">
+                <h2>Clientes Devendo</h2>
+                <button id="refresh-pendentes-btn" title="Atualizar Lista"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="lista-pagamentos-pendentes-container">
+                <p class="feedback-message-pendentes loading" id="loading-pendentes"><i class="fas fa-spinner"></i> Carregando pagamentos pendentes...</p>
+                </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, query, where, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD5DNTmLpQZWihjDDGHkFa5S5zuEJHquno", // SUA API KEY AQUI
+            authDomain: "bossexpress-6f223.firebaseapp.com",
+            projectId: "bossexpress-6f223",
+            storageBucket: "bossexpress-6f223.firebasestorage.app",
+            messagingSenderId: "127302407767",
+            appId: "1:127302407767:web:c50d1adc02f6837c79f512",
+            measurementId: "G-W255R6N65R"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const containerEl = document.getElementById('lista-pagamentos-pendentes-container');
+        const loadingPendentesEl = document.getElementById('loading-pendentes');
+        const refreshBtnEl = document.getElementById('refresh-pendentes-btn');
+
+        function formatCurrency(value) { return `R$ ${Number(value).toFixed(2).replace('.', ',')}`; }
+
+        async function carregarPagamentosPendentes() {
+            if (loadingPendentesEl) loadingPendentesEl.style.display = 'block';
+            containerEl.innerHTML = ''; // Limpa antes de carregar, exceto o loading
+
+            try {
+                const q = query(
+                    collection(db, "vendas_rapidas"),
+                    where("statusPagamento", "==", "pendente_cliente"),
+                    orderBy("dataVenda", "desc")
+                );
+                const querySnapshot = await getDocs(q);
+
+                if (loadingPendentesEl) loadingPendentesEl.style.display = 'none';
+
+                if (querySnapshot.empty) {
+                    containerEl.innerHTML = '<p class="feedback-message-pendentes">Nenhum pagamento pendente encontrado.</p>';
+                    return;
+                }
+
+                querySnapshot.forEach(docSnap => {
+                    const venda = docSnap.data();
+                    venda.id = docSnap.id; // Adiciona o ID do documento aos dados da venda
+                    renderizarItemPendente(venda);
+                });
+
+            } catch (error) {
+                console.error("Erro ao carregar pagamentos pendentes: ", error);
+                if (loadingPendentesEl) loadingPendentesEl.style.display = 'none';
+                containerEl.innerHTML = '<p class="feedback-message-pendentes" style="color:var(--danger-color);">Erro ao carregar dados. Tente novamente.</p>';
+            }
+        }
+
+        function renderizarItemPendente(venda) {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'pagamento-pendente-item';
+            itemDiv.id = `venda-${venda.id}`;
+
+            const dataVenda = venda.dataVenda instanceof Timestamp ? venda.dataVenda.toDate() : new Date(venda.dataVenda);
+            const dataFormatada = dataVenda.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            let produtosHtml = '<ul>';
+            venda.itens.forEach(item => {
+                produtosHtml += `<li>${item.quantidade}x ${item.nome} (${formatCurrency(item.precoUnitario)})</li>`;
+            });
+            produtosHtml += '</ul>';
+
+            itemDiv.innerHTML = `
+                <h3>${venda.clienteNome || 'Cliente não informado'}</h3>
+                <p><span class="item-label">Telefone:</span> ${venda.clienteTelefone || 'Não informado'}</p>
+                <p><span class="item-label">Valor Total:</span> <span class="item-valor">${formatCurrency(venda.valorTotal)}</span></p>
+                <p><span class="item-label">Data da Compra:</span> ${dataFormatada}</p>
+                <p class="item-label">Itens Comprados:</p>
+                <div class="produtos-comprados-lista">${produtosHtml}</div>
+                <div class="pagamento-pendente-actions">
+                    <button class="btn-whatsapp" data-id="${venda.id}"><i class="fab fa-whatsapp"></i> Cobrar</button>
+                    <button class="btn-marcar-pago" data-id="${venda.id}"><i class="fas fa-check-circle"></i> Marcar como Pago</button>
+                </div>
+            `;
+            containerEl.appendChild(itemDiv);
+
+            // Event Listeners para os botões de ação
+            itemDiv.querySelector('.btn-whatsapp').addEventListener('click', () => enviarMensagemWhatsApp(venda));
+            itemDiv.querySelector('.btn-marcar-pago').addEventListener('click', () => marcarComoPago(venda.id, venda.clienteNome));
+        }
+
+        function enviarMensagemWhatsApp(venda) {
+            if (!venda.clienteTelefone) {
+                alert("Telefone do cliente não cadastrado para esta venda.");
+                return;
+            }
+            // Normaliza número para formato internacional (Brasil: 55 + DDD + Número)
+            let telefone = venda.clienteTelefone.replace(/\D/g, '');
+            if (telefone.length === 10 || telefone.length === 11) { // Ex: 11999998888 ou 1133334444
+                 telefone = "55" + telefone;
+            } else if (telefone.startsWith("55") && (telefone.length === 12 || telefone.length === 13) ) {
+                // já está no formato com 55
+            } else {
+                alert("Formato de telefone inválido para WhatsApp. Use DDD+Número ou 55+DDD+Número.");
+                return;
+            }
+
+
+            const dataVenda = venda.dataVenda instanceof Timestamp ? venda.dataVenda.toDate() : new Date(venda.dataVenda);
+            const dataFormatada = dataVenda.toLocaleDateString('pt-BR');
+
+            let itensDescricao = "";
+            venda.itens.forEach(item => {
+                itensDescricao += `\n- ${item.quantidade}x ${item.nome}`;
+            });
+
+            const mensagem = `Olá ${venda.clienteNome}! 😊 Lembrete amigável sobre sua compra na Boss Express no valor de ${formatCurrency(venda.valorTotal)}, realizada em ${dataFormatada}. \nItens:${itensDescricao}\n\nPor favor, como podemos prosseguir com o pagamento? ✨`;
+            const whatsappUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        async function marcarComoPago(vendaId, nomeCliente) {
+            if (!confirm(`Tem certeza que deseja marcar a dívida de ${nomeCliente || 'este cliente'} como PAGA?`)) {
+                return;
+            }
+            try {
+                const vendaRef = doc(db, "vendas_rapidas", vendaId);
+                await updateDoc(vendaRef, {
+                    statusPagamento: "pago_fiado", // Novo status para indicar que foi pago após ser fiado
+                    dataPagamentoFiado: Timestamp.now()
+                });
+                alert(`Pagamento de ${nomeCliente || ''} marcado como PAGO com sucesso!`);
+                // Remove o item da UI ou recarrega a lista
+                const itemElement = document.getElementById(`venda-${vendaId}`);
+                if (itemElement) itemElement.remove();
+                if (containerEl.children.length === 0) {
+                     containerEl.innerHTML = '<p class="feedback-message-pendentes">Nenhum pagamento pendente encontrado.</p>';
+                }
+
+            } catch (error) {
+                console.error("Erro ao marcar como pago: ", error);
+                alert("Erro ao atualizar o status do pagamento. Tente novamente.");
+            }
+        }
+
+        refreshBtnEl.addEventListener('click', carregarPagamentosPendentes);
+
+        // Carregar inicialmente
+        document.addEventListener('DOMContentLoaded', carregarPagamentosPendentes);
+    </script>
+</body>
+</html>
