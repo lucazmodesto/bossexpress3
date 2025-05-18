@@ -504,7 +504,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, Timestamp, runTransaction, orderBy, query, addDoc, where, updateDoc, limit, setDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, Timestamp, runTransaction, orderBy, query, addDoc, where, updateDoc, limit, setDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";  // Adicionado getDoc
 
         const firebaseConfig = {
             apiKey: "AIzaSyD5DNTmLpQZWihjDDGHkFa5S5zuEJHquno", // SUA API KEY AQUI
@@ -518,9 +518,11 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const clientesFiadoCollectionRef = collection(db, "clientesFiado"); // Referência para a coleção de clientes
+        const clientesFiadoCollectionRef = collection(db, "clientesFiado");
+        const bolsaVendedorDocRef = doc(db, "configuracoesVendedor", "bolsaAtual"); // Documento fixo para a bolsa
 
-        // Elementos da UI (mantidos)
+
+        // Elementos da UI
         const productGridEl = document.getElementById("product-grid");
         const loadingIndicatorGridEl = document.getElementById("loading-indicator-grid");
         const cartItemsListEl = document.getElementById("cart-items-list");
@@ -552,16 +554,16 @@
 
         // Estado da Aplicação
         let catalogoCompletoProdutos = [];
-        let bolsaDoVendedor = [];
+        let bolsaDoVendedor = []; // Agora será carregada/salva no Firebase
         let cart = [];
         let selectedPaymentMethod = null;
         let qrCodeInstance = null;
-        const localStorageBolsaKey = "bossExpressVendaRapidaBolsa_v2";
-        let clientesFiadoCache = []; // Cache local dos clientes do Firebase
+        // const localStorageBolsaKey = "bossExpressVendaRapidaBolsa_v2"; // Removido
+        let clientesFiadoCache = [];
 
 
         // --- Funções Utilitárias ---
-        const showFeedback = (el, message, type = 'info') => {
+        const showFeedback = (el, message, type = 'info') => { /* ... mantida ... */
             if (!el) return;
             const iconHtml = type === 'loading' ? '<i class="fas fa-spinner fa-spin"></i> ' : '';
             el.innerHTML = `<p class="feedback-message ${type}">${iconHtml}${message}</p>`;
@@ -571,7 +573,7 @@
                 el.style.display = 'flex'; el.style.justifyContent = 'center'; el.style.alignItems = 'center';
             }
         };
-        const clearFeedback = (el) => {
+        const clearFeedback = (el) => { /* ... mantida ... */
             if (!el) return;
             el.innerHTML = '';
             if (el === listaCatalogoParaBolsaDivEl) {
@@ -584,8 +586,8 @@
         function formatCurrency(value) { return `R$ ${Number(value).toFixed(2).replace('.', ',')}`; }
 
 
-        // --- Gestão de Clientes (Firebase) ---
-        async function carregarClientesFiadoDoFirebase() {
+        // --- Gestão de Clientes (Firebase) --- (mantida como na resposta anterior)
+        async function carregarClientesFiadoDoFirebase() { /* ... mantida ... */
             console.log("Carregando clientes do Firebase...");
             try {
                 const q = query(clientesFiadoCollectionRef, orderBy("nomeLower"));
@@ -598,98 +600,98 @@
                 console.log("Clientes carregados do Firebase:", clientesFiadoCache.length);
             } catch (error) {
                 console.error("Erro ao carregar clientes do Firebase:", error);
-                // Não mostrar alerta, apenas logar, para não interromper o fluxo principal se for um problema de rede temporário
             }
         }
-
-        async function salvarClienteFiadoNoFirebase(nome, telefone) {
+        async function salvarClienteFiadoNoFirebase(nome, telefone) { /* ... mantida ... */
             const nomeTrimmed = nome.trim();
             const nomeLower = nomeTrimmed.toLowerCase();
-            const telefoneLimpo = telefone.replace(/\D/g, ''); // Salva só números
+            const telefoneLimpo = telefone.replace(/\D/g, '');
 
             if (!nomeTrimmed) throw new Error("Nome do cliente não pode ser vazio.");
-
             try {
-                // Verifica se cliente já existe pelo nomeLower
                 const q = query(clientesFiadoCollectionRef, where("nomeLower", "==", nomeLower), limit(1));
                 const querySnapshot = await getDocs(q);
-
                 let clienteDocId;
                 let clienteData;
-
-                if (!querySnapshot.empty) { // Cliente existe, atualiza
+                if (!querySnapshot.empty) {
                     const clienteDoc = querySnapshot.docs[0];
                     clienteDocId = clienteDoc.id;
-                    const updateData = {
-                        telefone: telefoneLimpo,
-                        ultimaAtualizacao: Timestamp.now()
-                    };
-                    // Apenas atualiza o nome se o case for diferente, mantendo o nomeLower
-                    if (clienteDoc.data().nome !== nomeTrimmed) {
-                        updateData.nome = nomeTrimmed;
-                    }
+                    const updateData = { telefone: telefoneLimpo, ultimaAtualizacao: Timestamp.now() };
+                    if (clienteDoc.data().nome !== nomeTrimmed) { updateData.nome = nomeTrimmed; }
                     await updateDoc(doc(db, "clientesFiado", clienteDocId), updateData);
-                    console.log("Cliente atualizado no Firebase:", clienteDocId);
                     clienteData = { id: clienteDocId, nome: nomeTrimmed, nomeLower, telefone: telefoneLimpo, ...updateData};
-                } else { // Cliente não existe, cria novo
-                    const newClienteRef = doc(clientesFiadoCollectionRef); // Gera ID automaticamente
+                } else {
+                    const newClienteRef = doc(clientesFiadoCollectionRef);
                     clienteDocId = newClienteRef.id;
                     const novoCliente = {
-                        nome: nomeTrimmed,
-                        nomeLower: nomeLower,
-                        telefone: telefoneLimpo,
-                        dataCadastro: Timestamp.now(),
-                        ultimaAtualizacao: Timestamp.now()
+                        nome: nomeTrimmed, nomeLower: nomeLower, telefone: telefoneLimpo,
+                        dataCadastro: Timestamp.now(), ultimaAtualizacao: Timestamp.now()
                     };
-                    await setDoc(newClienteRef, novoCliente); // Usar setDoc com ref gerado
-                    console.log("Novo cliente salvo no Firebase:", clienteDocId);
+                    await setDoc(newClienteRef, novoCliente);
                     clienteData = { id: clienteDocId, ...novoCliente };
                 }
-                // Atualiza cache local e datalist
                 const indexCache = clientesFiadoCache.findIndex(c => c.nomeLower === nomeLower);
-                if (indexCache > -1) {
-                    clientesFiadoCache[indexCache] = clienteData;
-                } else {
-                    clientesFiadoCache.push(clienteData);
-                    clientesFiadoCache.sort((a,b) => a.nomeLower.localeCompare(b.nomeLower)); // Mantém ordenado
-                }
+                if (indexCache > -1) { clientesFiadoCache[indexCache] = clienteData; }
+                else { clientesFiadoCache.push(clienteData); clientesFiadoCache.sort((a,b) => a.nomeLower.localeCompare(b.nomeLower));}
                 renderizarClientesDatalist();
-                return clienteData; // Retorna o objeto completo do cliente com ID
+                return clienteData;
             } catch (error) {
                 console.error("Erro ao salvar cliente no Firebase:", error);
-                throw error; // Re-throw para ser tratado pelo chamador
+                throw error;
             }
         }
-
-        function renderizarClientesDatalist() {
-            clientesDatalistEl.innerHTML = ''; // Limpa datalist
+        function renderizarClientesDatalist() { /* ... mantida ... */
+            clientesDatalistEl.innerHTML = '';
             clientesFiadoCache.forEach(cliente => {
                 const option = document.createElement('option');
-                option.value = cliente.nome; // O que aparece na sugestão e no input
-                // Não precisa de data-telefone aqui, pois vamos buscar no cache ao selecionar
+                option.value = cliente.nome;
                 clientesDatalistEl.appendChild(option);
             });
         }
-
-        clienteNomeInputEl.addEventListener('input', () => {
+        clienteNomeInputEl.addEventListener('input', () => { /* ... mantida ... */
             const nomeDigitado = clienteNomeInputEl.value;
             const nomeDigitadoLower = nomeDigitado.toLowerCase();
             const clienteEncontrado = clientesFiadoCache.find(c => c.nome.toLowerCase() === nomeDigitadoLower);
-
             if (clienteEncontrado) {
                 clienteTelefoneInputEl.value = clienteEncontrado.telefone || "";
-                // Para garantir que o input reflita o nome como está no banco (case)
-                if(clienteNomeInputEl.value !== clienteEncontrado.nome){
-                    // Poderia auto-corrigir o case, mas pode ser irritante.
-                    // Se o usuário selecionou do datalist, o case já estará correto.
-                }
             } else {
-                clienteTelefoneInputEl.value = ""; // Limpa se não achar correspondência exata
+                clienteTelefoneInputEl.value = "";
             }
         });
 
-        // --- Montar Bolsa (sem alterações significativas, mantido como antes) ---
-        async function carregarCatalogoParaModalBolsa() {
+
+        // --- Montar Bolsa (Modificado para Firebase) ---
+        async function carregarBolsaDoFirebase() {
+            console.log("Carregando bolsa do Firebase...");
+            try {
+                const docSnap = await getDoc(bolsaVendedorDocRef);
+                if (docSnap.exists() && docSnap.data().itens) {
+                    bolsaDoVendedor = docSnap.data().itens;
+                    console.log("Bolsa carregada do Firebase:", bolsaDoVendedor.length, "itens.");
+                } else {
+                    bolsaDoVendedor = []; // Se não existir ou não tiver itens, bolsa vazia
+                    console.log("Nenhuma bolsa encontrada no Firebase ou está vazia. Iniciando com bolsa vazia.");
+                }
+            } catch (error) {
+                console.error("Erro ao carregar bolsa do Firebase:", error);
+                bolsaDoVendedor = []; // Em caso de erro, começa com bolsa vazia para não travar
+                alert("Não foi possível carregar a bolsa do vendedor. Verifique sua conexão ou tente mais tarde.");
+            }
+            return bolsaDoVendedor.length > 0; // Retorna true se a bolsa não estiver vazia
+        }
+
+        async function salvarBolsaNoFirebase() {
+            console.log("Salvando bolsa no Firebase...", bolsaDoVendedor);
+            try {
+                await setDoc(bolsaVendedorDocRef, { itens: bolsaDoVendedor, ultimaAtualizacao: Timestamp.now() });
+                console.log("Bolsa salva no Firebase com sucesso.");
+            } catch (error) {
+                console.error("Erro ao salvar bolsa no Firebase:", error);
+                alert("Erro ao salvar a configuração da bolsa. Suas alterações podem não persistir.");
+            }
+        }
+
+        async function carregarCatalogoParaModalBolsa() { // Permanece igual, carrega produtos da loja
             showFeedback(listaCatalogoParaBolsaDivEl, 'Carregando catálogo...', 'loading');
             try {
                 const q = query(collection(db, "produtos"), orderBy("nome"));
@@ -704,16 +706,17 @@
                         });
                     }
                 });
-                renderizarOpcoesModalBolsa();
+                renderizarOpcoesModalBolsa(); // Renderiza com base no catálogo e na bolsaDoVendedor já carregada
             } catch (error) {
                 console.error("Erro ao carregar catálogo para bolsa:", error);
                 showFeedback(listaCatalogoParaBolsaDivEl, 'Erro ao carregar catálogo.', 'error');
             }
         }
-        function renderizarOpcoesModalBolsa() {
+
+        function renderizarOpcoesModalBolsa() { // Renderiza com base na bolsaDoVendedor atual
             clearFeedback(listaCatalogoParaBolsaDivEl);
             if (catalogoCompletoProdutos.length === 0) {
-                showFeedback(listaCatalogoParaBolsaDivEl, 'Nenhum produto encontrado.'); return;
+                showFeedback(listaCatalogoParaBolsaDivEl, 'Nenhum produto encontrado no catálogo da loja.'); return;
             }
             const bolsaAtualMap = new Map(bolsaDoVendedor.map(item => [item.id, item.quantidadeNaBolsa]));
             catalogoCompletoProdutos.forEach(produto => {
@@ -733,7 +736,8 @@
                 });
             });
         }
-        confirmarBolsaBtnEl.addEventListener("click", () => {
+
+        confirmarBolsaBtnEl.addEventListener("click", async () => { // Modificado para salvar no Firebase
             bolsaDoVendedor = [];
             listaCatalogoParaBolsaDivEl.querySelectorAll('input[type="number"]').forEach(input => {
                 let quantidade = parseInt(input.value);
@@ -747,23 +751,30 @@
                     });
                 }
             });
-            localStorage.setItem(localStorageBolsaKey, JSON.stringify(bolsaDoVendedor));
+            
+            confirmarBolsaBtnEl.disabled = true;
+            confirmarBolsaBtnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando Bolsa...';
+            await salvarBolsaNoFirebase(); // Salva no Firebase
+            confirmarBolsaBtnEl.disabled = false;
+            confirmarBolsaBtnEl.innerHTML = '<i class="fas fa-check"></i> Confirmar Bolsa';
+
             montarBolsaModalEl.style.display = "none";
             renderizarProdutosDaBolsaNaGrade();
             resetCartAndPayment();
         });
-        function carregarBolsaDoLocalStorage() {
-            const bolsaSalva = localStorage.getItem(localStorageBolsaKey);
-            if (bolsaSalva) {
-                try { bolsaDoVendedor = JSON.parse(bolsaSalva); return true; }
-                catch (e) { console.error("Erro localStorage bolsa:", e); localStorage.removeItem(localStorageBolsaKey); return false; }
-            } return false;
-        }
-        btnMontarBolsaMainEl.addEventListener("click", () => { carregarCatalogoParaModalBolsa(); montarBolsaModalEl.style.display = "flex"; });
+
+        btnMontarBolsaMainEl.addEventListener("click", async () => { 
+            // Garante que a bolsaDoVendedor está carregada antes de popular o modal
+            // (já deve estar pelo DOMContentLoaded, mas uma checagem extra ou recarga pode ser útil se houver edições externas)
+            // await carregarBolsaDoFirebase(); // Opcional recarregar sempre, ou confiar no carregamento inicial
+            carregarCatalogoParaModalBolsa(); // Carrega produtos da loja para comparar com a bolsa
+            montarBolsaModalEl.style.display = "flex"; 
+        });
         closeMontarBolsaModalBtnEl.addEventListener("click", () => montarBolsaModalEl.style.display = "none");
 
+
         // --- Grade de Produtos e Carrinho (sem alterações significativas) ---
-        function renderizarProdutosDaBolsaNaGrade() {
+        function renderizarProdutosDaBolsaNaGrade() { /* ... mantida ... */
             clearFeedback(productGridEl);
             if (loadingIndicatorGridEl) loadingIndicatorGridEl.style.display = 'none';
             if (!bolsaDoVendedor || bolsaDoVendedor.length === 0) {
@@ -785,7 +796,7 @@
                 showFeedback(productGridEl, 'Todos os itens da sua bolsa foram vendidos! Monte uma nova bolsa.');
             }
         }
-        function adicionarProdutoAoCarrinho(productId) {
+        function adicionarProdutoAoCarrinho(productId) { /* ... mantida ... */
             const produtoNaBolsa = bolsaDoVendedor.find(p => p.id === productId);
             if (!produtoNaBolsa || produtoNaBolsa.quantidadeNaBolsa <= 0) { alert("Esgotado na bolsa!"); return; }
             const cartItem = cart.find(item => item.id === productId);
@@ -797,7 +808,7 @@
             }
             atualizarDisplayDoCarrinho();
         }
-        function atualizarDisplayDoCarrinho() {
+        function atualizarDisplayDoCarrinho() { /* ... mantida ... */
             cartItemsListEl.innerHTML = ""; let total = 0;
             if (cart.length === 0) {
                 cartItemsListEl.innerHTML = `<li class="feedback-message" id="cart-empty-message">Carrinho vazio</li>`;
@@ -825,7 +836,7 @@
             atualizarEstadoBotaoFinalizar();
             if (selectedPaymentMethod === "Dinheiro") calcularTroco();
         }
-        cartItemsListEl.addEventListener('click', (event) => {
+        cartItemsListEl.addEventListener('click', (event) => { /* ... mantida ... */
             const target = event.target.closest('button'); if (!target) return;
             const itemId = target.dataset.id; const itemNoCarrinho = cart.find(i => i.id === itemId); if (!itemNoCarrinho) return;
             const produtoNaBolsa = bolsaDoVendedor.find(p => p.id === itemId); const maxQuantityInBag = produtoNaBolsa ? produtoNaBolsa.quantidadeNaBolsa : 0;
@@ -835,8 +846,8 @@
             atualizarDisplayDoCarrinho();
         });
 
-        // --- Lógica de Pagamento (atualizada) ---
-        paymentMethodButtonsEl.forEach(button => {
+        // --- Lógica de Pagamento ---
+        paymentMethodButtonsEl.forEach(button => { /* ... mantida ... */
             button.addEventListener('click', () => {
                 selectedPaymentMethod = button.dataset.method;
                 paymentMethodButtonsEl.forEach(btn => btn.classList.remove('selected'));
@@ -850,7 +861,7 @@
             });
         });
         amountPaidInputEl.addEventListener('input', calcularTroco);
-        function calcularTroco() { /* ... mantida como antes ... */
+        function calcularTroco() { /* ... mantida ... */
             if (selectedPaymentMethod !== "Dinheiro") return;
             const totalVenda = cart.reduce((sum, item) => sum + (item.preco * item.quantidadeNoCarrinho), 0);
             const valorPago = parseFloat(amountPaidInputEl.value) || 0;
@@ -861,14 +872,14 @@
                 changeDueDisplayEl.classList.add('negative');
             } else if (valorPago > 0 && valorPago >= totalVenda) {
                  changeDueDisplayEl.textContent = `Troco: ${formatCurrency(troco)}`;
-            } else if (valorPago === 0 && totalVenda > 0) { // Se valor pago é 0, mas há total
-                 changeDueDisplayEl.textContent = `Troco: ${formatCurrency(0)}`; // Mostra troco 0, mas botão finalizar pode estar desabilitado
-            } else { // Se valor pago é 0 e total é 0
+            } else if (valorPago === 0 && totalVenda > 0) { 
+                 changeDueDisplayEl.textContent = `Troco: ${formatCurrency(0)}`;
+            } else { 
                  changeDueDisplayEl.textContent = `Troco: R$ 0,00`;
             }
             atualizarEstadoBotaoFinalizar();
         }
-        function atualizarEstadoBotaoFinalizar() { /* ... mantida como antes ... */
+        function atualizarEstadoBotaoFinalizar() { /* ... mantida ... */
             const totalVenda = cart.reduce((sum, item) => sum + (item.preco * item.quantidadeNoCarrinho), 0);
             let podeFinalizar = cart.length > 0 && !!selectedPaymentMethod;
             if (selectedPaymentMethod === "Dinheiro") {
@@ -877,7 +888,7 @@
             }
             finalizeSaleBtnEl.disabled = !podeFinalizar;
         }
-        function resetCartAndPayment(limparCliente = true) { /* ... mantida como antes ... */
+        function resetCartAndPayment(limparCliente = true) { /* ... mantida ... */
             cart = []; selectedPaymentMethod = null;
             paymentMethodButtonsEl.forEach(btn => btn.classList.remove('selected'));
             cashPaymentDetailsEl.style.display = "none"; amountPaidInputEl.value = "";
@@ -888,7 +899,7 @@
 
 
         // --- Finalizar Venda (atualizada para Pagar Depois com Firebase) ---
-        finalizeSaleBtnEl.addEventListener("click", async () => {
+        finalizeSaleBtnEl.addEventListener("click", async () => { /* ... mantida como antes ... */
             if (finalizeSaleBtnEl.disabled) return;
             const totalVenda = cart.reduce((sum, item) => sum + (item.preco * item.quantidadeNoCarrinho), 0);
             finalizeSaleBtnEl.disabled = true;
@@ -897,13 +908,10 @@
             if (selectedPaymentMethod === "Pagar Depois") {
                 pagarDepoisModalEl.style.display = "flex";
                 clienteNomeInputEl.focus();
-                // O processamento continua no handler do botão "confirmar-dados-pagar-depois-btn"
-                // Reabilitar o botão de finalizar da tela principal se o modal for fechado
-                finalizeSaleBtnEl.disabled = cart.length === 0 || !selectedPaymentMethod; // Reavalia baseado no estado atual
+                finalizeSaleBtnEl.disabled = cart.length === 0 || !selectedPaymentMethod; 
                 finalizeSaleBtnEl.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Venda';
                 return;
             }
-            // ... resto da lógica para PIX, Dinheiro, etc. (mantida como antes) ...
             if (selectedPaymentMethod === "PIX") {
                 const chavePix = "43152513801"; const nomeBeneficiario = "Boss Express"; const cidadeBeneficiario = "ITU";
                 pixKeyInfoTextEl.textContent = `Chave PIX (CPF): ${chavePix}`;
@@ -917,7 +925,7 @@
                 pixPaymentStatusTextEl.textContent = `Total: ${formatCurrency(totalVenda)}. Aguardando...`;
                 pixModalEl.style.display = "flex";
                 await registrarVendaEAtualizarEstoque(totalVenda, selectedPaymentMethod, null, { payloadPix: pixPayload, idTxPix: identificadorTransacao, chavePixDestino: chavePix }, null);
-            } else { // Dinheiro, Débito, Crédito
+            } else { 
                 let dadosPagamentoDinheiro = null;
                 if (selectedPaymentMethod === "Dinheiro") {
                     const valorPago = parseFloat(amountPaidInputEl.value) || 0;
@@ -940,23 +948,20 @@
             }
         });
 
-        confirmarDadosPagarDepoisBtnEl.addEventListener("click", async () => {
+        confirmarDadosPagarDepoisBtnEl.addEventListener("click", async () => { /* ... mantida como antes ... */
             const nomeClienteInput = clienteNomeInputEl.value.trim();
-            const telefoneClienteInput = clienteTelefoneInputEl.value.trim(); // Validação/formatação do telefone pode ser mais robusta
+            const telefoneClienteInput = clienteTelefoneInputEl.value.trim(); 
 
             if (!nomeClienteInput) {
                 alert("Por favor, insira o nome do cliente.");
                 clienteNomeInputEl.focus();
                 return;
             }
-
             confirmarDadosPagarDepoisBtnEl.disabled = true;
             confirmarDadosPagarDepoisBtnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-
             try {
-                const clienteSalvo = await salvarClienteFiadoNoFirebase(nomeClienteInput, telefoneClienteInput); // Salva/atualiza no Firebase
+                const clienteSalvo = await salvarClienteFiadoNoFirebase(nomeClienteInput, telefoneClienteInput); 
                 const totalVenda = cart.reduce((sum, item) => sum + (item.preco * item.quantidadeNoCarrinho), 0);
-
                 await registrarVendaEAtualizarEstoque(totalVenda, "Pagar Depois", null, null,
                     { docId: clienteSalvo.id, nome: clienteSalvo.nome, telefone: clienteSalvo.telefone }
                 );
@@ -970,14 +975,14 @@
             } finally {
                 confirmarDadosPagarDepoisBtnEl.disabled = false;
                 confirmarDadosPagarDepoisBtnEl.innerHTML = '<i class="fas fa-user-check"></i> Confirmar Cliente e Finalizar';
-                atualizarEstadoBotaoFinalizar(); // Atualiza o botão principal da tela de venda
+                atualizarEstadoBotaoFinalizar(); 
                 finalizeSaleBtnEl.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Venda';
             }
         });
 
+        // Modificado para salvar a bolsa no Firebase após a transação
         async function registrarVendaEAtualizarEstoque(valorTotalVenda, formaDePagamento, dadosDinheiro = null, dadosPix = null, dadosClienteFiado = null) {
-            // ... (lógica interna da transação mantida como antes, mas agora recebe dadosClienteFiado.docId) ...
-            const itensVendidosCopia = JSON.parse(JSON.stringify(cart));
+            const itensVendidosCopia = JSON.parse(JSON.stringify(cart)); 
             await runTransaction(db, async (transaction) => {
                 const produtosParaAtualizarRefs = new Map();
                 for (const itemVendido of itensVendidosCopia) {
@@ -1025,12 +1030,14 @@
                     vendaData.payloadPix = dadosPix.payloadPix; vendaData.idTxPix = dadosPix.idTxPix; vendaData.chavePixDestino = dadosPix.chavePixDestino;
                 }
                 if (dadosClienteFiado) {
-                    vendaData.clienteDocId = dadosClienteFiado.docId; // ID do cliente do Firebase
+                    vendaData.clienteDocId = dadosClienteFiado.docId; 
                     vendaData.clienteNome = dadosClienteFiado.nome;
                     vendaData.clienteTelefone = dadosClienteFiado.telefone;
                 }
-                await addDoc(collection(db, "vendas_rapidas"), vendaData); // Usar addDoc
+                await addDoc(collection(db, "vendas_rapidas"), vendaData); 
             });
+            
+            // Atualizar bolsa do vendedor localmente (o array bolsaDoVendedor)
             itensVendidosCopia.forEach(itemVendido => {
                 const itemNaBolsa = bolsaDoVendedor.find(p => p.id === itemVendido.id);
                 if (itemNaBolsa) {
@@ -1038,12 +1045,15 @@
                     if (itemNaBolsa.quantidadeNaBolsa < 0) itemNaBolsa.quantidadeNaBolsa = 0;
                 }
             });
-            localStorage.setItem(localStorageBolsaKey, JSON.stringify(bolsaDoVendedor));
+            // Filtrar itens com quantidade zero da bolsa antes de salvar
+            bolsaDoVendedor = bolsaDoVendedor.filter(item => item.quantidadeNaBolsa > 0);
+            await salvarBolsaNoFirebase(); // Salva a bolsa atualizada no Firebase
+            console.log("Bolsa no Firebase e estoque Firestore atualizados.");
         }
 
 
-        // --- Funções PIX (mantidas como antes) ---
-        function formatPixValue(value) { /* ... */ return value.toFixed(2).toString(); }
+        // --- Funções PIX (mantidas) ---
+        function formatPixValue(value) { return value.toFixed(2).toString(); }
         function generatePixPayload(chavePix, nomeBeneficiario, cidadeBeneficiario, valor, identificadorTx = 'VENTABOSS') { /* ... */
             const payloadFormatIndicator = "000201"; const pointOfInitiationMethod = "010211";
             const gui = "br.gov.bcb.pix"; const chave = String(chavePix).replace(/\D/g, '');
@@ -1085,21 +1095,20 @@
         });
 
 
-        // --- Event Listeners Gerais para Modais (atualizado) ---
-        function closeModalOnClickOutside(event) {
+        // --- Event Listeners Gerais para Modais (mantidos) ---
+        function closeModalOnClickOutside(event) { /* ... mantida ... */
             if (event.target === montarBolsaModalEl) montarBolsaModalEl.style.display = "none";
             if (event.target === pixModalEl) pixModalEl.style.display = "none";
             if (event.target === pagarDepoisModalEl) {
                 pagarDepoisModalEl.style.display = "none";
                  if (selectedPaymentMethod === "Pagar Depois" && finalizeSaleBtnEl.innerHTML.includes("Processando")) {
-                    // Se o modal foi fechado enquanto o botão principal estava processando "Pagar Depois"
-                    finalizeSaleBtnEl.disabled = cart.length === 0 || !selectedPaymentMethod; // Reavalia
+                    finalizeSaleBtnEl.disabled = cart.length === 0 || !selectedPaymentMethod; 
                     finalizeSaleBtnEl.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Venda';
                  }
             }
         }
         window.addEventListener("click", closeModalOnClickOutside);
-        window.addEventListener("keydown", (event) => {
+        window.addEventListener("keydown", (event) => { /* ... mantida ... */
             if (event.key === "Escape") {
                 if (montarBolsaModalEl.style.display === "flex") montarBolsaModalEl.style.display = "none";
                 if (pixModalEl.style.display === "flex") pixModalEl.style.display = "none";
@@ -1112,7 +1121,7 @@
                 }
             }
         });
-        closePagarDepoisModalBtnEl.addEventListener("click", () => {
+        closePagarDepoisModalBtnEl.addEventListener("click", () => { /* ... mantida ... */
             pagarDepoisModalEl.style.display = "none";
             if (selectedPaymentMethod === "Pagar Depois" && finalizeSaleBtnEl.innerHTML.includes("Processando")) {
                  finalizeSaleBtnEl.disabled = cart.length === 0 || !selectedPaymentMethod;
@@ -1124,19 +1133,23 @@
         // --- Inicialização ---
         document.addEventListener("DOMContentLoaded", async () => {
             const initialLoadingEl = loadingIndicatorGridEl || productGridEl;
-            showFeedback(initialLoadingEl, 'Inicializando...', 'loading');
-            if (!db) { showFeedback(initialLoadingEl, 'Erro de conexão com o banco de dados.', 'error'); return; }
+            showFeedback(initialLoadingEl, 'Inicializando sistema...', 'loading');
+            if (!db) { showFeedback(initialLoadingEl, 'Erro: Conexão com banco de dados falhou.', 'error'); return; }
 
             await carregarClientesFiadoDoFirebase(); // Carrega clientes do Firebase para o datalist
+            
+            // Tenta carregar a bolsa do Firebase
+            const bolsaCarregada = await carregarBolsaDoFirebase(); 
 
-            if (!carregarBolsaDoLocalStorage() || bolsaDoVendedor.length === 0) {
-                clearFeedback(initialLoadingEl);
-                abrirModalMontarBolsa();
-                showFeedback(productGridEl, 'Monte sua bolsa para começar a vender.');
+            if (!bolsaCarregada || bolsaDoVendedor.length === 0) {
+                clearFeedback(initialLoadingEl); // Limpa o "Inicializando"
+                abrirModalMontarBolsa(); // Abre para montar a bolsa, que também carrega catálogo de produtos
+                showFeedback(productGridEl, 'Sua bolsa está vazia ou não foi carregada. Monte sua bolsa para começar a vender.');
             } else {
-                renderizarProdutosDaBolsaNaGrade();
+                renderizarProdutosDaBolsaNaGrade(); // Se a bolsa foi carregada, renderiza
             }
-            atualizarDisplayDoCarrinho();
+            
+            atualizarDisplayDoCarrinho(); // Atualiza o carrinho (que estará vazio inicialmente)
             console.log("Boss Express - Venda Rápida Pronta.");
         });
     </script>
